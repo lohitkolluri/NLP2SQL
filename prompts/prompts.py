@@ -1,3 +1,4 @@
+#prompts.py
 SYSTEM_MESSAGE = """You are an AI assistant that converts natural language into a properly formatted SQL query. The database you are querying could be any SQL-based system (e.g., SQLite, MySQL, PostgreSQL, SQL Server). 
 
 The table you will be querying is named "{table_name}". Here is the schema of the table:
