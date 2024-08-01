@@ -1,19 +1,14 @@
-# sql_db.py
-
 import sqlite3
 from sqlite3 import Error
 import random
 from datetime import date, timedelta
-from tqdm import tqdm
 import pandas as pd
 
-DATABASE_NAME = "mydatabase.db"
-
-def create_connection():
+def create_connection(db_file):
     """ Create or connect to an SQLite database """
-    conn = None;
+    conn = None
     try:
-        conn = sqlite3.connect(DATABASE_NAME)
+        conn = sqlite3.connect(db_file)
     except Error as e:
         print(e)
     return conn
@@ -36,46 +31,16 @@ def insert_data(conn, table_name, data_dict):
     conn.commit()
     return cur.lastrowid
 
-def query_database(query):
+def query_database(query, db_file):
     """ Run SQL query and return results in a dataframe """
-    conn = create_connection()
+    conn = create_connection(db_file)
     df = pd.read_sql_query(query, conn)
     conn.close()
     return df
 
-# Create a financial table
-def setup_financial_table():
-    conn = create_connection()
-    sql_create_financial_table = """
-    CREATE TABLE IF NOT EXISTS finances (
-        id INTEGER PRIMARY KEY,
-        date TEXT NOT NULL,
-        revenue REAL NOT NULL,
-        expenses REAL NOT NULL,
-        profit REAL NOT NULL
-    );
-    """
-    create_table(conn, sql_create_financial_table)
-
-    # Insert 100 rows with random data
-    start_date = date.today() - timedelta(days=99)
-    for i in range(100):
-        revenue = random.randint(5000, 20000)  # Random revenue between 5000 and 20000
-        expenses = random.randint(1000, 15000)  # Random expenses between 1000 and 15000
-        profit = revenue - expenses
-        data = {
-            "date": start_date + timedelta(days=i),
-            "revenue": revenue,
-            "expenses": expenses,
-            "profit": profit
-        }
-        insert_data(conn, "finances", data)
-
-    conn.close()
-
-def get_schema_representation():
+def get_schema_representation(db_file):
     """ Get the database schema in a JSON-like format """
-    conn = create_connection()
+    conn = create_connection(db_file)
     cursor = conn.cursor()
     
     # Query to get all table names
@@ -101,7 +66,3 @@ def get_schema_representation():
     
     conn.close()
     return db_schema
-
-if __name__ == "__main__":
-
-    print(get_schema_representation())
