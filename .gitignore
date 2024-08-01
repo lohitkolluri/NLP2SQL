@@ -1,3 +1,4 @@
 .env
 /_pycache_/
-/mydatabase.db
+mydatabase.db
+temp_database.db

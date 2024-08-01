@@ -4,50 +4,112 @@ import json
 import sql_db
 from prompts.prompts import SYSTEM_MESSAGE
 from azure_openai import get_completion_from_messages
+import plotly.express as px
+import os
 
-# Custom CSS for dark theme styling
+# Custom CSS for improved styling
 st.markdown("""
     <style>
     .main {
         background-color: #1e1e1e;
         padding: 20px;
         border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .header, .footer {
+        background-color: #333;
+        color: #f1f1f1;
+        padding: 15px;
+        text-align: center;
+        border-radius: 10px;
+    }
+    .header {
+        font-size: 28px;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+    .footer {
+        font-size: 14px;
+        font-style: italic;
     }
     .title {
         color: #f1f1f1;
-        font-size: 36px;
+        font-size: 40px;
         font-weight: bold;
+        margin-bottom: 20px;
     }
-    .subtitle, .instruction, .warning, .error, .success {
+    .subtitle {
         color: #f1f1f1;
+        font-size: 20px;
+        margin-bottom: 20px;
+    }
+    .warning, .error, .success {
+        padding: 15px;
+        border-radius: 8px;
+        color: #f1f1f1;
+        margin-bottom: 20px;
+        font-size: 16px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     .warning {
-        background-color: #5a5a5a;
-        padding: 10px;
-        border-radius: 5px;
+        background-color: #ffcc00;
+        color: #333;
     }
     .error {
         background-color: #ff4b4b;
-        padding: 10px;
-        border-radius: 5px;
     }
     .success {
         background-color: #4caf50;
-        padding: 10px;
-        border-radius: 5px;
     }
     .stTextInput input {
         color: #f1f1f1;
         background-color: #333333;
         border: none;
-        padding: 10px;
-        border-radius: 5px;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 16px;
     }
     .stTextInput label {
         color: #f1f1f1;
+        font-size: 16px;
+    }
+    .stButton button {
+        background-color: #4caf50;
+        color: #f1f1f1;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .stButton button:hover {
+        background-color: #45a049;
+    }
+    .stSelectbox select {
+        color: #f1f1f1;
+        background-color: #333333;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+    .stSelectbox label {
+        color: #f1f1f1;
+        font-size: 16px;
     }
     </style>
     """, unsafe_allow_html=True)
+
+@st.cache_data
+def get_data(query, db_file):
+    """Query the database and return results."""
+    return sql_db.query_database(query, db_file)
+
+@st.cache_data
+def get_schema(db_file):
+    """Get schema representation for the database."""
+    return sql_db.get_schema_representation(db_file)
 
 def save_temp_file(uploaded_file):
     """Save the uploaded file as a temporary database file."""
@@ -66,7 +128,7 @@ def generate_sql_query(user_message, table_name, schema):
     response = get_completion_from_messages(formatted_system_message, user_message)
     return response
 
-def handle_query_response(response):
+def handle_query_response(response, db_file):
     """Parse the response from the API and display the result."""
     try:
         json_response = json.loads(response)
@@ -78,16 +140,30 @@ def handle_query_response(response):
             st.code(query, language="sql")
 
             # Execute query and display results
-            sql_results = sql_db.query_database(query, db_file)
+            sql_results = get_data(query, db_file)
             if not sql_results.empty:
                 st.write("Query Results:")
                 st.dataframe(sql_results)
+
+                # Visualization
+                chart_type = st.selectbox("Choose Chart Type", ["None"] + sql_results.columns.tolist())
+                if chart_type != "None":
+                    fig = px.bar(sql_results, x=sql_results.columns[0], y=chart_type) if chart_type in sql_results.columns else None
+                    if fig:
+                        st.plotly_chart(fig)
+                
+                # Export and Reporting
                 st.download_button(
                     label="Download Results",
                     data=sql_results.to_csv(index=False),
                     file_name='query_results.csv',
                     mime='text/csv'
                 )
+                
+                # Report Summary
+                st.write("Summary Report:")
+                st.write(f"Number of rows: {len(sql_results)}")
+                st.write(f"Columns: {', '.join(sql_results.columns)}")
             else:
                 st.markdown("<div class='warning'>The query returned no results.</div>", unsafe_allow_html=True)
         else:
@@ -101,9 +177,8 @@ def handle_query_response(response):
         st.markdown(f"<div class='error'>An unexpected error occurred: {e}</div>", unsafe_allow_html=True)
 
 # Streamlit app layout
+st.markdown("<div class='header'>NLP2SQL ☁️</div>", unsafe_allow_html=True)
 st.markdown("<div class='main'>", unsafe_allow_html=True)
-st.markdown("<h1 class='title'>SQL Query Generator</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>Upload your database file and generate SQL queries dynamically.</p>", unsafe_allow_html=True)
 
 # File uploader widget
 uploaded_file = st.file_uploader("Upload Database", type=["db", "sqlite", "sql"])
@@ -113,7 +188,7 @@ if uploaded_file is not None:
     db_file = save_temp_file(uploaded_file)
 
     # Get schema representation for the database
-    schemas = sql_db.get_schema_representation(db_file)
+    schemas = get_schema(db_file)
     table_names = list(schemas.keys())
 
     if table_names:
@@ -135,10 +210,12 @@ if uploaded_file is not None:
                     response = generate_sql_query(user_message, selected_table, schema)
 
                     # Handle API response and display results
-                    handle_query_response(response)
+                    handle_query_response(response, db_file)
     else:
         st.info("No tables found in the database.")
 else:
     st.info("Please upload a database file to get started.")
 
 st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Made By Lohit Kolluri, Alok Kumar, and Aditya Sinha</div>", unsafe_allow_html=True)
+
