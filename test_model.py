@@ -9,9 +9,9 @@ load_dotenv()
 
 # Set OpenAI API configuration
 openai.api_type = "azure"
-openai.api_base = os.getenv("OPENAI_ENDPOINT")
+openai.api_base = os.getenv("https://mlsasrm-openai.openai.azure.com/")
 openai.api_version = "2023-03-15-preview"
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("ea629a7ea8504c009c9e846bc41baec7")
 
 
 def load_wikisql_data(file_path):
