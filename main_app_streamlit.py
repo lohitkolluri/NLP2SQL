@@ -217,5 +217,5 @@ else:
     st.info("Please upload a database file to get started.")
 
 st.markdown("</div>", unsafe_allow_html=True)
-st.markdown("<div class='footer'>Made By Lohit Kolluri, Alok Kumar, and Aditya Sinha</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Made By Lohit Kolluri, Alok Kumar, Aditya Sinha and Mohammad Arshad Ali</div>", unsafe_allow_html=True)
 
