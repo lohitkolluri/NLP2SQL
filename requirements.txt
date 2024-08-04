@@ -1,5 +1,9 @@
-numpy
-pandas
-streamlit
+numpy~=1.26.4
+pandas~=2.2.2
+streamlit~=1.37.0
 openai==0.28
-python-dotenv
+python-dotenv~=1.0.1
+tensorflow~=2.17.0
+matplotlib~=3.9.1
+seaborn~=0.13.2
+scikit-learn~=1.5.1
