@@ -2,3 +2,4 @@
 /_pycache_/
 mydatabase.db
 temp_database.db
+.DS_Store

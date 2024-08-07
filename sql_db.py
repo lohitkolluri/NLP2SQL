@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pandas as pd
 
 def create_connection(db_file):
-    """ Create or connect to an SQLite database """
+    """Create or connect to an SQLite database."""
     conn = None
     try:
         conn = sqlite3.connect(db_file)
@@ -14,7 +14,7 @@ def create_connection(db_file):
     return conn
 
 def create_table(conn, create_table_sql):
-    """ Create a table with the specified SQL command """
+    """Create a table with the specified SQL command."""
     try:
         c = conn.cursor()
         c.execute(create_table_sql)
@@ -22,7 +22,7 @@ def create_table(conn, create_table_sql):
         print(e)
 
 def insert_data(conn, table_name, data_dict):
-    """ Insert a new data into a table """
+    """Insert new data into a table."""
     columns = ', '.join(data_dict.keys())
     placeholders = ', '.join('?' * len(data_dict))
     sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
@@ -32,18 +32,18 @@ def insert_data(conn, table_name, data_dict):
     return cur.lastrowid
 
 def query_database(query, db_file):
-    """ Run SQL query and return results in a dataframe """
+    """Run an SQL query and return results in a DataFrame."""
     conn = create_connection(db_file)
     df = pd.read_sql_query(query, conn)
     conn.close()
     return df
 
 def get_schema_representation(db_file):
-    """ Get the database schema in a JSON-like format """
+    """Get the database schema in a JSON-like format."""
     conn = create_connection(db_file)
     cursor = conn.cursor()
     
-    # Query to get all table names
+    # Get all table names
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = cursor.fetchall()
     
@@ -52,16 +52,11 @@ def get_schema_representation(db_file):
     for table in tables:
         table_name = table[0]
         
-        # Query to get column details for each table
+        # Get column details for each table
         cursor.execute(f"PRAGMA table_info({table_name});")
         columns = cursor.fetchall()
         
-        column_details = {}
-        for column in columns:
-            column_name = column[1]
-            column_type = column[2]
-            column_details[column_name] = column_type
-        
+        column_details = {column[1]: column[2] for column in columns}
         db_schema[table_name] = column_details
     
     conn.close()
