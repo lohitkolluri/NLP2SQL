@@ -1,98 +1,78 @@
-<h1 align="center" id="title">NLP2SQL</h1>
+# NLP2SQL
 
-<p id="description">NLP2SQL is an NLP task that aims to generate SQL queries from natural language text. It involves converting text input into a structured format to create a semantically correct SQL query for database execution.</p>
+NLP2SQL is a project that aims to generate SQL queries from natural language text. It involves converting text input into a structured format to create a semantically correct SQL query for database execution.
 
-  
-  
-<h2>🧐 Features</h2>
+## 🧐 Features
 
-Here're some of the project's best features:
+Here are some of the project's best features:
 
-*   Natural Language to SQL
-*   Dynamic Database Handling
-*   Data Display and Visualization
-*   Report Generation
-*   Performance Optimization
+- **Natural Language to SQL**: Convert natural language text to SQL queries.
+- **Dynamic Database Handling**: Adapt to different database schemas dynamically.
+- **Data Display and Visualization**: Present data in an intuitive and interactive manner.
+- **Report Generation**: Generate comprehensive reports based on SQL queries.
+- **Performance Optimization**: Optimized for efficiency and speed.
 
-<h2>🛠️ Installation Steps:</h2>
+## 🛠️ Installation Steps
 
-<p>1. Clone the Repository:</p>
+1. **Clone the Repository:**
 
-```
-git clone https://github.com/lohitkolluri/NLP2SQL.git
-```
+   ```bash
+   git clone https://github.com/lohitkolluri/NLP2SQL.git
+   cd NLP2SQL
+   ```
 
-```
-cd NLP2SQL
-```
+2. **Create and Activate a Virtual Environment:**
 
-<p>3. Create and Activate a Virtual Environment:</p>
+   - On macOS/Linux:
 
-```
-# On macOS/Linux 
-```
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
 
-```
-python3 -m venv venv 
-```
+   - On Windows:
 
-```
-source venv/bin/activate
-```
+     ```bash
+     python -m venv venv
+     .\venv\Scripts\activate
+     ```
 
-```
-# On Windows 
-```
+3. **Install Dependencies:**
 
-```
-python -m venv venv 
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```
-.\venv\Scripts\activate
-```
+4. **Set Up Environment Variables:**
 
-<p>10. Install Dependencies:</p>
+   Create a `.env` file in the root directory and add the necessary environment variables such as your Azure OpenAI endpoint and API key.
 
-```
-pip install -r requirements.txt
-```
+   ```env
+   OPENAI_ENDPOINT=https://your-azure-openai-endpoint
+   OPENAI_API_KEY=your-azure-openai-api-key
+   ```
 
-<p>11. Set Up Environment Variables:</p>
+5. **Running the App:**
 
-```
-Create a .env file in the root directory and add the necessary environment variables such as your Azure OpenAI endpoint and API key.
-```
+   ```bash
+   streamlit run NLP2SQL.py
+   ```
 
-```
-OPENAI_ENDPOINT=https://your-azure-openai-endpoint
-```
+6. **Access the App:**
 
-```
-OPENAI_API_KEY=your-azure-openai-api-key
-```
+   Open your web browser and go to:
 
-<p>14. Running the App</p>
+   ```
+   http://localhost:8501
+   ```
 
-```
-streamlit run main_app_streamlit.py
-```
-
-<p>15. Access the App:</p>
-
-```
-http://localhost:8501
-```
-
-  
-  
-<h2>💻 Built with</h2>
+## 💻 Built With
 
 Technologies used in the project:
 
-*   Streamlit
-*   Plotly
-*   Python
-*   SQLite
-*   Pandas
-*   Azure OpenAI
+- **Streamlit**: For building the interactive web application.
+- **Plotly**: For data visualization.
+- **Python**: The core programming language.
+- **SQLite**: For the database.
+- **Pandas**: For data manipulation.
+- **Azure OpenAI**: For generating SQL queries from natural language input.
