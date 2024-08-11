@@ -7,99 +7,13 @@ from azure_openai import get_completion_from_messages
 import plotly.express as px
 import os
 
-# Custom CSS for improved styling
-st.markdown("""
-    <style>
-    .main {
-        background-color: #1e1e1e;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-    .header, .footer {
-        background-color: #333;
-        color: #f1f1f1;
-        padding: 15px;
-        text-align: center;
-        border-radius: 10px;
-    }
-    .header {
-        font-size: 28px;
-        font-weight: bold;
-        letter-spacing: 1px;
-    }
-    .footer {
-        font-size: 14px;
-        font-style: italic;
-    }
-    .title {
-        color: #f1f1f1;
-        font-size: 40px;
-        font-weight: bold;
-        margin-bottom: 20px;
-    }
-    .subtitle {
-        color: #f1f1f1;
-        font-size: 20px;
-        margin-bottom: 20px;
-    }
-    .warning, .error, .success {
-        padding: 15px;
-        border-radius: 8px;
-        color: #f1f1f1;
-        margin-bottom: 20px;
-        font-size: 16px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    .warning {
-        background-color: #ffcc00;
-        color: #333;
-    }
-    .error {
-        background-color: #ff4b4b;
-    }
-    .success {
-        background-color: #4caf50;
-    }
-    .stTextInput input {
-        color: #f1f1f1;
-        background-color: #333333;
-        border: none;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 16px;
-    }
-    .stTextInput label {
-        color: #f1f1f1;
-        font-size: 16px;
-    }
-    .stButton button {
-        background-color: #4caf50;
-        color: #f1f1f1;
-        border: none;
-        border-radius: 8px;
-        padding: 12px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        transition: background-color 0.3s;
-    }
-    .stButton button:hover {
-        background-color: #45a049;
-    }
-    .stSelectbox select {
-        color: #f1f1f1;
-        background-color: #333333;
-        border: none;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 16px;
-    }
-    .stSelectbox label {
-        color: #f1f1f1;
-        font-size: 16px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# Load and apply the external CSS file
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# Load custom CSS
+load_css("style.css")
 
 @st.cache_data
 def get_data(query, db_file):

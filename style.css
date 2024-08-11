@@ -1,0 +1,108 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333333;
+}
+.main {
+    background-color: #202020;
+    color: #f0f0f0;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+    margin-bottom: 20px;
+}
+.header, .footer {
+    background-color: #444;
+    color: #f1f1f1;
+    padding: 20px;
+    text-align: center;
+    border-radius: 12px;
+}
+.header {
+    font-size: 30px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    margin-bottom: 20px;
+}
+.footer {
+    font-size: 14px;
+    font-style: italic;
+    margin-top: 20px;
+}
+.title {
+    color: #f1f1f1;
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+.subtitle {
+    color: #f1f1f1;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+.message {
+    background-color: #2b2b2b;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+.warning, .error, .success {
+    padding: 15px;
+    border-radius: 10px;
+    color: #f1f1f1;
+    margin-bottom: 20px;
+    font-size: 18px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+.warning {
+    background-color: #f4b400;
+    color: #000;
+}
+.error {
+    background-color: #e53e3e;
+}
+.success {
+    background-color: #48bb78;
+}
+.stTextInput input {
+    color: #f1f1f1;
+    background-color: #333;
+    border: 1px solid #555;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 18px;
+    width: 100%;
+}
+.stTextInput label {
+    color: #f1f1f1;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+.stButton button {
+    background-color: #48bb78;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+}
+.stButton button:hover {
+    background-color: #38a169;
+    transform: translateY(-2px);
+}
+.stSelectbox select {
+    color: #f1f1f1;
+    background-color: #333;
+    border: 1px solid #555;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 18px;
+    width: 100%;
+}
+.stSelectbox label {
+    color: #f1f1f1;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
