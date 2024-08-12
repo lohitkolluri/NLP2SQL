@@ -1,108 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+/* General styles */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333333;
+    font-family: 'Roboto', sans-serif;
+    background-color: #121212;
+    color: #E0E0E0;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.3s ease;
+    font-size: 16px;
+    line-height: 1.6;
 }
-.main {
-    background-color: #202020;
-    color: #f0f0f0;
-    padding: 20px;
+
+/* Sidebar styles */
+.sidebar-content {
+    background-color: #1E1E1E;
+    padding: 24px;
     border-radius: 12px;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-    margin-bottom: 20px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s ease, opacity 0.5s ease;
+    opacity: 0;
+    animation: sidebarFadeIn 0.5s forwards;
 }
+
+@keyframes sidebarFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.sidebar-content .header {
+    font-size: 1.7em;
+    color: #BB86FC;
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.sidebar-content .header .icon {
+    font-size: 1.7em;
+    margin-right: 10px;
+}
+
+/* Header and Footer */
 .header, .footer {
-    background-color: #444;
-    color: #f1f1f1;
-    padding: 20px;
+    background-color: #222222;
+    color: #FFFFFF;
+    padding: 24px;
     text-align: center;
     border-radius: 12px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s ease;
 }
+
 .header {
-    font-size: 30px;
-    font-weight: bold;
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: #BB86FC;
     letter-spacing: 1.5px;
-    margin-bottom: 20px;
+    text-transform: uppercase;
 }
+
 .footer {
     font-size: 14px;
-    font-style: italic;
-    margin-top: 20px;
+    margin-top: 32px;
+    color: #A0A0A0;
 }
-.title {
-    color: #f1f1f1;
-    font-size: 36px;
-    font-weight: bold;
+
+/* Card styles */
+.card {
+    background-color: #1E1E1E;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
     margin-bottom: 20px;
+    transition: background-color 0.3s ease;
 }
-.subtitle {
-    color: #f1f1f1;
-    font-size: 20px;
-    margin-bottom: 20px;
-}
-.message {
-    background-color: #2b2b2b;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-}
-.warning, .error, .success {
-    padding: 15px;
-    border-radius: 10px;
-    color: #f1f1f1;
-    margin-bottom: 20px;
-    font-size: 18px;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-}
-.warning {
-    background-color: #f4b400;
-    color: #000;
-}
-.error {
-    background-color: #e53e3e;
-}
-.success {
-    background-color: #48bb78;
-}
-.stTextInput input {
-    color: #f1f1f1;
-    background-color: #333;
-    border: 1px solid #555;
-    padding: 12px;
-    border-radius: 10px;
-    font-size: 18px;
-    width: 100%;
-}
-.stTextInput label {
-    color: #f1f1f1;
-    font-size: 18px;
-    margin-bottom: 10px;
-}
-.stButton button {
-    background-color: #48bb78;
-    color: #fff;
+/* Button styles */
+.stButton>button {
+    background-color: #BB86FC;
+    color: #121212;
+    padding: 10px 20px;
+    border-radius: 8px;
     border: none;
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-size: 18px;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.3s;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
 }
-.stButton button:hover {
-    background-color: #38a169;
-    transform: translateY(-2px);
+
+.stButton>button:hover {
+    background-color: #9F77E5;
+    color: #FFFFFF;
 }
-.stSelectbox select {
-    color: #f1f1f1;
-    background-color: #333;
-    border: 1px solid #555;
+
+/* Alerts and notifications */
+.success, .warning, .error {
+    border-radius: 8px;
     padding: 12px;
-    border-radius: 10px;
-    font-size: 18px;
-    width: 100%;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
 }
-.stSelectbox label {
-    color: #f1f1f1;
-    font-size: 18px;
-    margin-bottom: 10px;
+
+.success {
+    background-color: #2E7D32;
+    color: #FFFFFF;
+}
+
+.warning {
+    background-color: #F9A825;
+    color: #FFFFFF;
+}
+
+.error {
+    background-color: #C62828;
+    color: #FFFFFF;
+}
+
+.success .icon, .warning .icon, .error .icon {
+    margin-right: 10px;
+    font-size: 24px;
+}
+
+.title {
+    font-size: 2em;
+    color: #BB86FC;
+    margin-bottom: 20px;
+}
+
+.stDataFrame {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.altair-chart {
+    margin-top: 20px;
 }
