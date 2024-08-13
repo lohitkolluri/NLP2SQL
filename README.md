@@ -71,7 +71,7 @@ Here are some of the project's best features:
 Technologies used in the project:
 
 - **Streamlit**: For building the interactive web application.
-- **Plotly**: For data visualization.
+- **Altair**: For data visualization.
 - **Python**: The core programming language.
 - **SQLite**: For the database.
 - **Pandas**: For data manipulation.
