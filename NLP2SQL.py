@@ -6,6 +6,12 @@ import sql_db
 from prompts.prompts import SYSTEM_MESSAGE
 from azure_openai import get_completion_from_messages
 
+st.set_page_config(
+    page_icon="🤖",
+    page_title="Chat with Your DB",
+    layout="centered"
+)
+
 # Load and apply the external CSS file
 def load_css(file_name):
     """Load and apply custom CSS for the Streamlit app."""
@@ -168,7 +174,7 @@ if uploaded_file is not None:
             st.write("Schema:")
             st.json(schema)
             
-            user_message = st.text_input("Enter your query message:", key="user_message")
+            user_message = st.chat_input("Enter your query message:", key="user_message")
 
             if user_message:
                 with st.spinner('Generating SQL query...'):
