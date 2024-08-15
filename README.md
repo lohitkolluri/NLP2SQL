@@ -76,3 +76,4 @@ Technologies used in the project:
 - **SQLite**: For the database.
 - **Pandas**: For data manipulation.
 - **Azure OpenAI**: For generating SQL queries from natural language input.
+- **GPT 3.5 Turbo**: Model Used to Transcribe NLT to Sematic SQL.
