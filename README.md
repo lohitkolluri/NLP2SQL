@@ -2,6 +2,12 @@
 
 NLP2SQL is a project that aims to generate SQL queries from natural language text. It involves converting text input into a structured format to create a semantically correct SQL query for database execution.
 
+<h2>🖼️ Diagram</h2>
+
+<p align="center">
+    <img src="NLP2SQL.png" alt="NLP2SQL Diagram" width="600px">
+</p>
+
 ## 🧐 Features
 
 Here are some of the project's best features:
