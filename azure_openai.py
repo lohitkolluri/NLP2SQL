@@ -1,6 +1,6 @@
-from dotenv import load_dotenv  
 import os  
 import openai  
+from dotenv import load_dotenv  
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -42,6 +42,3 @@ def get_completion_from_messages(system_message, user_message, model="NLP2SQL", 
     
     # Return the content of the generated response
     return response.choices[0].message["content"]
-
-    # Print the generated response
-    print(get_completion_from_messages(system_message, user_message))

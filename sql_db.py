@@ -1,7 +1,5 @@
 import sqlite3
 from sqlite3 import Error
-import random
-from datetime import date, timedelta
 import pandas as pd
 
 def create_connection(db_file):
@@ -13,29 +11,18 @@ def create_connection(db_file):
         print(e)
     return conn
 
-def create_table(conn, create_table_sql):
-    """Create a table with the specified SQL command."""
-    try:
-        c = conn.cursor()
-        c.execute(create_table_sql)
-    except Error as e:
-        print(e)
-
-def insert_data(conn, table_name, data_dict):
-    """Insert new data into a table."""
-    columns = ', '.join(data_dict.keys())
-    placeholders = ', '.join('?' * len(data_dict))
-    sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
-    cur = conn.cursor()
-    cur.execute(sql, list(data_dict.values()))
-    conn.commit()
-    return cur.lastrowid
-
 def query_database(query, db_file):
     """Run an SQL query and return results in a DataFrame."""
     conn = create_connection(db_file)
-    df = pd.read_sql_query(query, conn)
-    conn.close()
+    if conn is None:
+        return pd.DataFrame()  # Return empty DataFrame on connection failure
+    try:
+        df = pd.read_sql_query(query, conn)
+    except Exception as e:
+        print(f"Error executing query: {e}")
+        return pd.DataFrame()
+    finally:
+        conn.close()
     return df
 
 def get_schema_representation(db_file):

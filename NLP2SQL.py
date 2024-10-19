@@ -5,6 +5,18 @@ import altair as alt
 import sql_db
 from prompts.prompts import SYSTEM_MESSAGE
 from azure_openai import get_completion_from_messages
+from dotenv import load_dotenv  
+import os  
+import openai  
+
+# Load environment variables from a .env file
+load_dotenv()
+
+# Set OpenAI API configuration using environment variables
+openai.api_type = "azure"
+openai.api_base = os.getenv("OPENAI_ENDPOINT")  
+openai.api_version = "2023-03-15-preview"
+openai.api_key = os.getenv("OPENAI_API_KEY")  
 
 st.set_page_config(
     page_icon="🤖",
@@ -37,6 +49,11 @@ def save_temp_file(uploaded_file):
     with open(temp_file_path, "wb") as f:
         f.write(uploaded_file.read())
     return temp_file_path
+
+def analyze_query(query):
+    """Analyze the query for potential optimizations."""
+    # Placeholder for analysis logic
+    return query  # Return the original query for now
 
 def generate_sql_query(user_message, table_name, schema):
     """Generate SQL query using the formatted system message."""
@@ -87,7 +104,6 @@ def create_chart(df, chart_type):
 
     return chart
 
-
 def handle_query_response(response, db_file):
     """Parse the response from the API and display results and charts."""
     try:
@@ -103,8 +119,11 @@ def handle_query_response(response, db_file):
         st.write("Generated SQL Query:")
         st.code(query, language="sql")
 
+        # Analyze and optimize the query (placeholder)
+        optimized_query = analyze_query(query)
+
         # Execute query and display results
-        sql_results = get_data(query, db_file)
+        sql_results = get_data(optimized_query, db_file)
         if sql_results.empty:
             st.markdown("<div class='warning'><span class='material-icons icon'>warning</span>The query returned no results.</div>", unsafe_allow_html=True)
             st.session_state.query_executed = False
@@ -128,12 +147,28 @@ def handle_query_response(response, db_file):
                     st.altair_chart(chart)
         
         # Export and Reporting
-        st.download_button(
-            label="Download Results",
-            data=sql_results.to_csv(index=False),
-            file_name='query_results.csv',
-            mime='text/csv'
-        )
+        export_format = st.selectbox("Select Export Format", options=["CSV", "JSON", "Excel"])
+        if export_format == "CSV":
+            st.download_button(
+                label="Download Results as CSV",
+                data=sql_results.to_csv(index=False),
+                file_name='query_results.csv',
+                mime='text/csv'
+            )
+        elif export_format == "JSON":
+            st.download_button(
+                label="Download Results as JSON",
+                data=sql_results.to_json(orient='records'),
+                file_name='query_results.json',
+                mime='application/json'
+            )
+        elif export_format == "Excel":
+            st.download_button(
+                label="Download Results as Excel",
+                data=sql_results.to_excel(index=False),
+                file_name='query_results.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
         
         # Report Summary
         st.write("Summary Report:")
@@ -171,8 +206,8 @@ if uploaded_file is not None:
         if selected_table:
             st.markdown(f"<div class='title'>Table: {selected_table} 🗄</div>", unsafe_allow_html=True)
             schema = schemas[selected_table]
-            st.write("Schema:")
-            st.json(schema)
+            with st.expander("View Schema", expanded=True):
+                st.json(schema)
             
             user_message = st.chat_input("Enter your query message:", key="user_message")
 
@@ -189,6 +224,11 @@ else:
 with st.sidebar.expander("Query History", expanded=False):
     if "query_history" in st.session_state and st.session_state.query_history:
         for i, past_query in enumerate(st.session_state.query_history, 1):
+            if st.button(f"Re-run Query {i}"):
+                user_message = past_query  # Set the user message to the selected query
+                with st.spinner('Generating SQL query...'):
+                    response = generate_sql_query(user_message, selected_table, schema)
+                    handle_query_response(response, db_file)
             st.markdown(f"**Query {i}:**")
             st.code(past_query, language="sql")
     else:
