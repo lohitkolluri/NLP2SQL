@@ -30,14 +30,14 @@ def load_css(file_name: str) -> None:
 load_css("style.css")
 
 @st.cache_data
-def get_data(query: str, db_file: str) -> pd.DataFrame:
+def get_data(query: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> pd.DataFrame:
     """Fetch results from the database based on the provided SQL query."""
-    return sql_db.query_database(query, db_file)
+    return sql_db.query_database(query, db_name, db_type, host, user, password)
 
 @st.cache_resource
-def get_schema(db_file: str) -> dict:
+def get_schema(db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> dict:
     """Retrieve schema representation of the database."""
-    return sql_db.get_schema_representation(db_file)
+    return sql_db.get_schema_representation(db_name, db_type, host, user, password)
 
 def save_temp_file(uploaded_file) -> str:
     """Save the uploaded database file temporarily."""
@@ -98,7 +98,7 @@ def display_summary_statistics(df: pd.DataFrame) -> None:
     st.subheader("Summary Statistics")
     st.write(df.describe())
 
-def handle_query_response(response: str, db_file: str) -> None:
+def handle_query_response(response: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> None:
     """Process the API response and display query results and charts."""
     try:
         json_response = json.loads(response)
@@ -115,7 +115,7 @@ def handle_query_response(response: str, db_file: str) -> None:
         st.success("SQL Query generated successfully!")
         st.code(query, language="sql")
 
-        sql_results = get_data(query, db_file)
+        sql_results = get_data(query, db_name, db_type, host, user, password)
         if sql_results.empty:
             st.warning("The query returned no results.")
             return
@@ -190,30 +190,63 @@ def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
         st.error("Selected export format is not supported.")
 
 # Streamlit App Layout
-uploaded_file = st.sidebar.file_uploader("", type=["db", "sqlite", "sql"])
+db_type = st.sidebar.selectbox("Select Database Type", options=["SQLite", "PostgreSQL"])
+if db_type == "SQLite":
+    uploaded_file = st.sidebar.file_uploader("Upload SQLite Database", type=["db", "sqlite", "sql"])
 
-if uploaded_file is not None:
-    db_file = save_temp_file(uploaded_file)
-    schemas = get_schema(db_file)
-    table_names = list(schemas.keys())
+    if uploaded_file is not None:
+        db_file = save_temp_file(uploaded_file)
+        schemas = get_schema(db_file, db_type='sqlite')
+        table_names = list(schemas.keys())
 
-    if table_names:
-        selected_table = st.sidebar.selectbox("Table", options=table_names, format_func=lambda x: f"{x} 🗃")
-        if selected_table:
-            st.markdown(f"<div class='title'>Table: {selected_table} 🗄</div>", unsafe_allow_html=True)
-            schema = schemas[selected_table]
-            with st.expander("View Schema", expanded=True):
-                st.json(schema)
+        if table_names:
+            selected_table = st.sidebar.selectbox("Table", options=table_names, format_func=lambda x: f"{x} 🗃")
+            if selected_table:
+                st.markdown(f"<div class='title'>Table: {selected_table} 🗄</div>", unsafe_allow_html=True)
+                schema = schemas[selected_table]
+                with st.expander("View Schema", expanded=True):
+                    st.json(schema)
 
-            user_message = st.text_input("Enter your query message:", key="user_message")
-            if user_message:
-                with st.spinner('Generating SQL query...'):
-                    response = generate_sql_query(user_message, selected_table, schema)
-                    handle_query_response(response, db_file)
+                user_message = st.text_input("Enter your query message:", key="user_message")
+                if user_message:
+                    with st.spinner('Generating SQL query...'):
+                        response = generate_sql_query(user_message, selected_table, schema)
+                        handle_query_response(response, db_file, db_type='sqlite')
+
+        else:
+            st.info("No tables found in the database.")
     else:
-        st.info("No tables found in the database.")
-else:
-    st.info("Please upload a database file to start.")
+        st.info("Please upload a database file to start.")
+
+elif db_type == "PostgreSQL":
+    postgres_host = st.sidebar.text_input("PostgreSQL Host")
+    postgres_db = st.sidebar.text_input("Database Name")
+    postgres_user = st.sidebar.text_input("Username")
+    postgres_password = st.sidebar.text_input("Password", type="password")
+
+    if postgres_host and postgres_db and postgres_user and postgres_password:
+        schemas = get_schema(postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
+        table_names = list(schemas.keys())
+
+        if table_names:
+            selected_table = st.sidebar.selectbox("Table", options=table_names, format_func=lambda x: f"{x} 🗃")
+            if selected_table:
+                st.markdown(f"<div class='title'>Table: {selected_table} 🗄</div>", unsafe_allow_html=True)
+                schema = schemas[selected_table]
+                with st.expander("View Schema", expanded=True):
+                    st.json(schema)
+
+                user_message = st.text_input("Enter your query message:", key="user_message")
+                if user_message:
+                    with st.spinner('Generating SQL query...'):
+                        response = generate_sql_query(user_message, selected_table, schema)
+                        handle_query_response(response, postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
+
+        else:
+            st.info("No tables found in the database.")
+    else:
+        st.info("Please fill in all PostgreSQL connection details to start.")
+
 
 # Query history in collapsible sidebar
 with st.sidebar.expander("Query History", expanded=False):
