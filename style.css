@@ -3,9 +3,9 @@
 
 /* General styles */
 body {
-    font-family: 'Roboto', sans-serif;
-    background-color: #121212;
-    color: #E0E0E0;
+    font-family: 'Roboto', sans-serif; /* Use Roboto for a modern look */
+    background-color: #f4f4f4;  /* Light gray background */
+    color: #E0E0E0; /* Default text color */
     margin: 0;
     padding: 0;
     transition: background-color 0.3s ease;
@@ -15,7 +15,7 @@ body {
 
 /* Sidebar styles */
 .sidebar-content {
-    background-color: #1E1E1E;
+    background-color: #1E1E1E; /* Dark background for sidebar */
     padding: 24px;
     border-radius: 12px;
     box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
@@ -35,7 +35,7 @@ body {
 
 .sidebar-content .header {
     font-size: 1.7em;
-    color: #BB86FC;
+    color: #BB86FC; /* Accent color */
     display: flex;
     align-items: center;
     padding: 10px 0;
@@ -48,8 +48,8 @@ body {
 
 /* Header and Footer */
 .header, .footer {
-    background-color: #222222;
-    color: #FFFFFF;
+    background-color: #222222; /* Dark background */
+    color: #FFFFFF; /* White text */
     padding: 24px;
     text-align: center;
     border-radius: 12px;
@@ -61,7 +61,7 @@ body {
     font-size: 36px;
     font-weight: 700;
     margin-bottom: 32px;
-    color: #BB86FC;
+    color: #BB86FC; /* Accent color */
     letter-spacing: 1.5px;
     text-transform: uppercase;
 }
@@ -69,33 +69,35 @@ body {
 .footer {
     font-size: 14px;
     margin-top: 32px;
-    color: #A0A0A0;
+    color: #A0A0A0; /* Light gray for footer text */
 }
 
 /* Card styles */
 .card {
-    background-color: #1E1E1E;
+    background-color: #1E1E1E; /* Dark card background */
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
     margin-bottom: 20px;
     transition: background-color 0.3s ease;
 }
+
 /* Button styles */
 .stButton>button {
-    background-color: #BB86FC;
-    color: #121212;
+    background-color: #BB86FC; /* Button background */
+    color: #121212; /* Button text color */
     padding: 10px 20px;
     border-radius: 8px;
     border: none;
     font-size: 16px;
     font-weight: 500;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Added transform for hover effect */
 }
 
 .stButton>button:hover {
-    background-color: #9F77E5;
-    color: #FFFFFF;
+    background-color: #9F77E5; /* Darker shade on hover */
+    color: #FFFFFF; /* Change text color on hover */
+    transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
 
 /* Alerts and notifications */
@@ -108,17 +110,17 @@ body {
 }
 
 .success {
-    background-color: #2E7D32;
+    background-color: #2E7D32; /* Green for success */
     color: #FFFFFF;
 }
 
 .warning {
-    background-color: #F9A825;
+    background-color: #F9A825; /* Yellow for warning */
     color: #FFFFFF;
 }
 
 .error {
-    background-color: #C62828;
+    background-color: #C62828; /* Red for error */
     color: #FFFFFF;
 }
 
@@ -127,18 +129,31 @@ body {
     font-size: 24px;
 }
 
+/* Title styling */
 .title {
     font-size: 2em;
-    color: #BB86FC;
+    color: #BB86FC; /* Accent color for titles */
     margin-bottom: 20px;
 }
 
+/* DataFrame styling */
 .stDataFrame {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Altair chart margin */
 .altair-chart {
     margin-top: 20px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .header {
+        font-size: 28px; /* Smaller header on mobile */
+    }
+    .sidebar-content {
+        padding: 16px; /* Less padding on mobile */
+    }
 }

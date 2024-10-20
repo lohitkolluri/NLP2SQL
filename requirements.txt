@@ -1,6 +1,7 @@
-numpy
-pandas
 streamlit
-openai==0.28
-python-dotenv
+pandas
 altair
+python-dotenv
+openai==0.28
+streamlit-extras
+sqlalchemy
