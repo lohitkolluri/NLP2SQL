@@ -1,8 +1,8 @@
 # NLP2SQL
 
-NLP2SQL is a project that aims to generate SQL queries from natural language text. It involves converting text input into a structured format to create a semantically correct SQL query for database execution.
+NLP2SQL is a project that aims to generate SQL queries from natural language text. The system converts natural language inputs into semantically correct SQL queries, enabling dynamic database handling, data visualization, and interactive querying.
 
-<h2>🖼️ Diagram</h2>
+## 🖼️ Diagram
 
 <p align="center">
     <img src="NLP2SQL.png" alt="NLP2SQL Diagram" width="600px">
@@ -10,13 +10,15 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
 
 ## 🧐 Features
 
-Here are some of the project's best features:
+Here are some of the project's key features:
 
-- **Natural Language to SQL**: Convert natural language text to SQL queries.
-- **Dynamic Database Handling**: Adapt to different database schemas dynamically.
-- **Data Display and Visualization**: Present data in an intuitive and interactive manner.
-- **Report Generation**: Generate comprehensive reports based on SQL queries.
-- **Performance Optimization**: Optimized for efficiency and speed.
+- **Natural Language to SQL**: Convert text queries into SQL commands.
+- **Multi-Database Support**: Supports both SQLite and PostgreSQL.
+- **Interactive Data Explorer**: Utilize data explorer for filtering and analyzing query results.
+- **Dynamic Schema Representation**: Fetch and display database schemas dynamically.
+- **Custom Visualizations**: Generate charts and graphs (Bar, Line, Scatter, Area, Histogram).
+- **Export Options**: Export query results in CSV or Parquet formats.
+- **Query History**: Save and revisit previous queries for future use.
 
 ## 🛠️ Installation Steps
 
@@ -51,7 +53,7 @@ Here are some of the project's best features:
 
 4. **Set Up Environment Variables:**
 
-   Create a `.env` file in the root directory and add the necessary environment variables such as your Azure OpenAI endpoint and API key.
+   Create a `.env` file in the root directory and add the necessary environment variables for Azure OpenAI API:
 
    ```env
    OPENAI_ENDPOINT=https://your-azure-openai-endpoint
@@ -77,9 +79,17 @@ Here are some of the project's best features:
 Technologies used in the project:
 
 - **Streamlit**: For building the interactive web application.
-- **Altair**: For data visualization.
-- **Python**: The core programming language.
-- **SQLite**: For the database.
+- **Altair**: For creating data visualizations.
 - **Pandas**: For data manipulation.
-- **Azure OpenAI**: For generating SQL queries from natural language input.
-- **GPT 3.5 Turbo**: Model Used to Transcribe NLT to Sematic SQL.
+- **SQLite & PostgreSQL**: For database support.
+- **Azure OpenAI**: For converting natural language to SQL queries.
+- **Streamlit Extras**: Enhancing UI components like data explorer and chart containers.
+- **GPT-3.5 Turbo**: Language model used for query generation.
+
+## 🚀 Additional Features
+
+- **Custom CSS Styling**: Improved the interface aesthetics with custom CSS.
+- **Schema Explorer**: View database schema before query execution.
+- **Safe SQL Execution**: Validation to prevent execution of harmful SQL commands like `DROP`, `DELETE`, or `ALTER`.
+- **Database File Upload**: Upload SQLite databases directly into the app for querying.
+- **Collapsible Query History**: Re-run or review previous queries via a collapsible section.
