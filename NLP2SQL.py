@@ -5,21 +5,24 @@ import altair as alt
 import sql_db
 from prompts.prompts import SYSTEM_MESSAGE
 from azure_openai import get_completion_from_messages
-from dotenv import load_dotenv  
-import os  
-import openai  
+from dotenv import load_dotenv
+import os
+import openai
+import io
+import xlsxwriter
 
 # Load environment variables from a .env file
 load_dotenv()
 
 # Set OpenAI API configuration using environment variables
 openai.api_type = "azure"
-openai.api_base = os.getenv("OPENAI_ENDPOINT")  
+openai.api_base = os.getenv("OPENAI_ENDPOINT")
 openai.api_version = "2023-03-15-preview"
-openai.api_key = os.getenv("OPENAI_API_KEY")  
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# --- UI Configuration ---
 st.set_page_config(
-    page_icon="🤖",
+    page_icon="🗃️",
     page_title="Chat with Your DB",
     layout="centered"
 )
@@ -33,6 +36,7 @@ def load_css(file_name):
 # Load custom CSS
 load_css("style.css")
 
+# --- Caching and Utility Functions ---
 @st.cache_data
 def get_data(query, db_file):
     """Query the database and return results."""
@@ -52,7 +56,6 @@ def save_temp_file(uploaded_file):
 
 def analyze_query(query):
     """Analyze the query for potential optimizations."""
-    # Placeholder for analysis logic
     return query  # Return the original query for now
 
 def generate_sql_query(user_message, table_name, schema):
@@ -61,7 +64,6 @@ def generate_sql_query(user_message, table_name, schema):
         table_name=table_name,
         schema=json.dumps(schema, indent=2)
     )
-
     response = get_completion_from_messages(formatted_system_message, user_message)
     return response
 
@@ -145,7 +147,7 @@ def handle_query_response(response, db_file):
                 chart = create_chart(sql_results, chart_type)
                 if chart:
                     st.altair_chart(chart)
-        
+
         # Export and Reporting
         export_format = st.selectbox("Select Export Format", options=["CSV", "JSON", "Excel"])
         if export_format == "CSV":
@@ -163,9 +165,20 @@ def handle_query_response(response, db_file):
                 mime='application/json'
             )
         elif export_format == "Excel":
+            # Create an in-memory buffer for the Excel file
+            output = io.BytesIO()
+            
+            # Use pd.ExcelWriter to write the DataFrame to the buffer
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                sql_results.to_excel(writer, index=False, sheet_name='Results')
+            
+            # Seek to the beginning of the stream
+            output.seek(0)
+
+            # Create the download button for the Excel file
             st.download_button(
                 label="Download Results as Excel",
-                data=sql_results.to_excel(index=False),
+                data=output,
                 file_name='query_results.xlsx',
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
@@ -187,7 +200,7 @@ def handle_query_response(response, db_file):
     except Exception as e:
         st.markdown(f"<div class='error'><span class='material-icons icon'>error</span>An unexpected error occurred: {e}</div>", unsafe_allow_html=True)
 
-# Streamlit app layout
+# --- Streamlit App Layout ---
 st.sidebar.markdown("<div class='header'><span class='material-icons icon'>data_usage</span>NLP2SQL</div>", unsafe_allow_html=True)
 
 uploaded_file = st.sidebar.file_uploader("Upload Database", type=["db", "sqlite", "sql"])
@@ -208,8 +221,8 @@ if uploaded_file is not None:
             schema = schemas[selected_table]
             with st.expander("View Schema", expanded=True):
                 st.json(schema)
-            
-            user_message = st.chat_input("Enter your query message:", key="user_message")
+               
+            user_message = st.text_input("Enter your query message:", key="user_message")
 
             if user_message:
                 with st.spinner('Generating SQL query...'):
