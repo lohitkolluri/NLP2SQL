@@ -37,32 +37,40 @@ def query_database(query, db_name, db_type, host=None, user=None, password=None)
         conn.close()
     return df
 
-def get_schema_representation(db_name, db_type, host=None, user=None, password=None):
-    """Get the database schema in a JSON-like format."""
+def get_all_schemas(db_name, db_type, host=None, user=None, password=None):
+    """Retrieve schema representation of all tables in the database."""
     conn = create_connection(db_name, host, user, password)
+    if conn is None:
+        return {}  # Return empty dict on connection failure
+
     cursor = conn.cursor()
     
-    if db_type == 'postgresql':
-        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
-    else:  # SQLite
+    # Get all table names
+    if db_type == 'sqlite':
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    elif db_type == 'postgresql':
+        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';")
     
     tables = cursor.fetchall()
     
-    db_schema = {}
-    
+    schemas = {}
     for table in tables:
         table_name = table[0]
-        
-        if db_type == 'postgresql':
-            cursor.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name='{table_name}';")
-        else:  # SQLite
+        if db_type == 'sqlite':
             cursor.execute(f"PRAGMA table_info({table_name});")
+        else:
+            cursor.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';")
         
         columns = cursor.fetchall()
         
-        column_details = {column[0]: column[1] for column in columns}
-        db_schema[table_name] = column_details
+        schema = {}
+        for col in columns:
+            if db_type == 'sqlite':
+                schema[col[1]] = col[2]  # col[1] is the column name, col[2] is the data type
+            elif db_type == 'postgresql':
+                schema[col[0]] = col[1]  # col[0] is the column name, col[1] is the data type
+        
+        schemas[table_name] = schema
     
     conn.close()
-    return db_schema
+    return schemas

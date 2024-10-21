@@ -3,14 +3,15 @@ import pandas as pd
 import json
 import altair as alt
 import sql_db
-from prompts.prompts import SYSTEM_MESSAGE
-from azure_openai import get_completion_from_messages
-from dotenv import load_dotenv
 import os
 import openai
 import re
+from azure_openai import get_completion_from_messages
+from dotenv import load_dotenv
+from prompts.prompts import SYSTEM_MESSAGE
 from streamlit_extras.dataframe_explorer import dataframe_explorer
 from streamlit_extras.chart_container import chart_container
+from graphviz import Digraph
 
 # Load environment variables and configure OpenAI API
 load_dotenv()
@@ -21,6 +22,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Streamlit UI setup
 st.set_page_config(page_icon="🗃️", page_title="Chat with Your DB", layout="centered")
+
 
 def load_css(file_name: str) -> None:
     """Load and apply custom CSS for styling."""
@@ -35,9 +37,9 @@ def get_data(query: str, db_name: str, db_type: str, host: str = None, user: str
     return sql_db.query_database(query, db_name, db_type, host, user, password)
 
 @st.cache_resource
-def get_schema(db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> dict:
-    """Retrieve schema representation of the database."""
-    return sql_db.get_schema_representation(db_name, db_type, host, user, password)
+def get_all_schemas(db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> dict:
+    """Retrieve schema representation of all tables in the database."""
+    return sql_db.get_all_schemas(db_name, db_type, host, user, password)
 
 def save_temp_file(uploaded_file) -> str:
     """Save the uploaded database file temporarily."""
@@ -46,14 +48,30 @@ def save_temp_file(uploaded_file) -> str:
         f.write(uploaded_file.read())
     return temp_file_path
 
-def generate_sql_query(user_message: str, table_name: str, schema: dict) -> str:
-    """Generate SQL query using the provided message and schema."""
+def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) -> str:
+    """Generate SQL query using the provided message and schemas for all tables."""
     formatted_system_message = SYSTEM_MESSAGE.format(
-        table_name=table_name,
-        schema=json.dumps(schema, indent=2)
+        schemas=json.dumps(schemas, indent=2)
     )
-    response = get_completion_from_messages(formatted_system_message, user_message)
-    return response
+    
+    for attempt in range(max_attempts):
+        response = get_completion_from_messages(formatted_system_message, user_message)
+        try:
+            json_response = json.loads(response)
+            query = json_response.get('query', None)  # Default to None if 'query' is not found
+            
+            if query is None:
+                return json.dumps({"error": "No query generated."})
+
+            if validate_sql_query(query):
+                return response
+            else:
+                user_message += " Please ensure the query is valid SQL and try again."
+        except json.JSONDecodeError:
+            user_message += " The response was not valid JSON. Please try again."
+    
+    return json.dumps({"error": "Failed to generate a valid SQL query after multiple attempts."})
+
 
 def create_chart(df: pd.DataFrame, chart_type: str, x_col: str, y_col: str) -> alt.Chart:
     """Create a chart based on selected chart type and columns."""
@@ -103,29 +121,36 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
     try:
         json_response = json.loads(response)
         query = json_response.get('query', '')
+        error = json_response.get('error', '')
+
+        if error:
+            st.error(f"Error generating SQL query: {error}")
+            return
 
         if not query:
             st.warning("No query generated. Please refine your message.")
-            return
-
-        if not validate_sql_query(query):
-            st.error("The generated SQL query is not valid. Please try a different query.")
             return
 
         st.success("SQL Query generated successfully!")
         st.code(query, language="sql")
 
         sql_results = get_data(query, db_name, db_type, host, user, password)
+        
         if sql_results.empty:
             st.warning("The query returned no results.")
             return
-
+        
+        # Check for duplicate column names
+        if sql_results.columns.duplicated().any():
+            st.error("The query returned a DataFrame with duplicate column names. Please modify your query to avoid this.")
+            return
+        
         # Convert object columns to datetime if possible
         for col in sql_results.select_dtypes(include=['object']):
             try:
                 sql_results[col] = pd.to_datetime(sql_results[col])
             except ValueError:
-                continue  # Skip columns that cannot be converted
+                continue # Skip columns that cannot be converted
 
         st.subheader("Query Results:")
         filtered_results = dataframe_explorer(sql_results, case=False)
@@ -164,11 +189,29 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
 
+
 def validate_sql_query(query: str) -> bool:
-    """Check the SQL query for potentially harmful commands."""
-    if re.search(r"(DROP|DELETE|INSERT|UPDATE|ALTER|CREATE|EXEC|;)", query, re.IGNORECASE):
+    """Check the SQL query for validity and potentially harmful commands."""
+    if not isinstance(query, str):
+        return False  # Ensure query is a string
+    
+    # List of disallowed keywords (case-insensitive)
+    disallowed = r'\b(DROP|DELETE|INSERT|UPDATE|ALTER|CREATE|EXEC)\b'
+    
+    # Check for disallowed keywords
+    if re.search(disallowed, query, re.IGNORECASE):
         return False
+    
+    # Basic syntax checks
+    if not query.strip().lower().startswith(('select', 'with')):
+        return False
+    
+    # Check for balanced parentheses
+    if query.count('(') != query.count(')'):
+        return False
+    
     return True
+
 
 def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
     """Enable exporting of results in selected format."""
@@ -189,6 +232,23 @@ def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
     else:
         st.error("Selected export format is not supported.")
 
+def visualize_schema(schema: dict) -> None:
+    """Visualize the database schema using Graphviz."""
+    dot = Digraph(comment='Database Schema')
+    
+    for table_name, table_info in schema.items():
+        dot.node(table_name, table_name, shape='box')
+        for column in table_info.get('columns', []):
+            dot.node(f"{table_name}.{column['name']}", column['name'], shape='ellipse')
+            dot.edge(table_name, f"{table_name}.{column['name']}")
+
+    # Render the graph
+    dot.format = 'png'
+    dot.render('schema', cleanup=True)
+    
+    # Display the graph in Streamlit
+    st.image('schema.png', caption='Database Schema Visualization')
+    
 # Streamlit App Layout
 db_type = st.sidebar.selectbox("Select Database Type", options=["SQLite", "PostgreSQL"])
 if db_type == "SQLite":
@@ -196,21 +256,21 @@ if db_type == "SQLite":
 
     if uploaded_file is not None:
         db_file = save_temp_file(uploaded_file)
-        schemas = get_schema(db_file, db_type='sqlite')
+        schemas = get_all_schemas(db_file, db_type='sqlite')
         table_names = list(schemas.keys())
 
         if table_names:
-            selected_table = st.sidebar.selectbox("Table", options=table_names, format_func=lambda x: f"{x} 🗃")
-            if selected_table:
-                st.markdown(f"<div class='title'>Table: {selected_table} 🗄</div>", unsafe_allow_html=True)
-                schema = schemas[selected_table]
-                with st.expander("View Schema", expanded=True):
-                    st.json(schema)
+            selected_tables = st.sidebar.multiselect("Select Tables", options=table_names, format_func=lambda x: f"{x} 🗃")
+            if selected_tables:
+                st.markdown(f"<div class='title'>Selected Tables: {', '.join(selected_tables)} 🗄</div>", unsafe_allow_html=True)
+                for table in selected_tables:
+                    with st.expander(f"View Schema: {table}", expanded=False):
+                        st.json(schemas[table])
 
-                user_message = st.text_input("Enter your query message:", key="user_message")
+                user_message = st.chat_input("Enter your query message:", key="user_message")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
-                        response = generate_sql_query(user_message, selected_table, schema)
+                        response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
                         handle_query_response(response, db_file, db_type='sqlite')
 
         else:
@@ -225,28 +285,27 @@ elif db_type == "PostgreSQL":
     postgres_password = st.sidebar.text_input("Password", type="password")
 
     if postgres_host and postgres_db and postgres_user and postgres_password:
-        schemas = get_schema(postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
+        schemas = get_all_schemas(postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
         table_names = list(schemas.keys())
 
         if table_names:
-            selected_table = st.sidebar.selectbox("Table", options=table_names, format_func=lambda x: f"{x} 🗃")
-            if selected_table:
-                st.markdown(f"<div class='title'>Table: {selected_table} 🗄</div>", unsafe_allow_html=True)
-                schema = schemas[selected_table]
-                with st.expander("View Schema", expanded=True):
-                    st.json(schema)
+            selected_tables = st.sidebar.multiselect("Select Tables", options=table_names, format_func=lambda x: f"{x} 🗃")
+            if selected_tables:
+                st.markdown(f"<div class='title'>Selected Tables: {', '.join(selected_tables)} 🗄</div>", unsafe_allow_html=True)
+                for table in selected_tables:
+                    with st.expander(f"View Schema: {table}", expanded=False):
+                        st.json(schemas[table])
 
                 user_message = st.text_input("Enter your query message:", key="user_message")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
-                        response = generate_sql_query(user_message, selected_table, schema)
+                        response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
                         handle_query_response(response, postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
 
         else:
             st.info("No tables found in the database.")
     else:
         st.info("Please fill in all PostgreSQL connection details to start.")
-
 
 # Query history in collapsible sidebar
 with st.sidebar.expander("Query History", expanded=False):
@@ -261,11 +320,11 @@ with st.sidebar.expander("Query History", expanded=False):
         st.dataframe(query_history_df, use_container_width=True)
 
         for i, (past_query, timestamp) in enumerate(zip(st.session_state.query_history, st.session_state.query_timestamps), 1):
-            st.markdown(f"**Query {i}:** {past_query}  \n*Executed on: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}*")
+            st.markdown(f"**Query {i}:** {past_query} \n*Executed on: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}*")
             if st.button(f"Re-run Query {i}", key=f"rerun_query_{i}"):
-                user_message = past_query  # Set the user message to the selected query
+                user_message = past_query # Set the user message to the selected query
                 with st.spinner('Generating SQL query...'):
-                    response = generate_sql_query(user_message, selected_table, schema)
-                    handle_query_response(response, db_file)
+                    response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
+                    handle_query_response(response, db_file if db_type == "SQLite" else postgres_db, db_type, host=postgres_host if db_type == "PostgreSQL" else None, user=postgres_user if db_type == "PostgreSQL" else None, password=postgres_password if db_type == "PostgreSQL" else None)
     else:
         st.info("No query history available.")
