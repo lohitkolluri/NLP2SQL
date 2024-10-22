@@ -12,24 +12,23 @@ from prompts.prompts import SYSTEM_MESSAGE
 from streamlit_extras.dataframe_explorer import dataframe_explorer
 from streamlit_extras.chart_container import chart_container
 from graphviz import Digraph
+import sqlite3
 
-# Load environment variables and configure OpenAI API
+
 load_dotenv()
 openai.api_type = "azure"
 openai.api_base = os.getenv("OPENAI_ENDPOINT")
 openai.api_version = "2023-03-15-preview"
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Streamlit UI setup
 st.set_page_config(page_icon="🗃️", page_title="Chat with Your DB", layout="centered")
 
-
 def load_css(file_name: str) -> None:
-    """Load and apply custom CSS for styling."""
     with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 load_css("style.css")
+
 
 @st.cache_data
 def get_data(query: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> pd.DataFrame:
@@ -39,7 +38,24 @@ def get_data(query: str, db_name: str, db_type: str, host: str = None, user: str
 @st.cache_resource
 def get_all_schemas(db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> dict:
     """Retrieve schema representation of all tables in the database."""
-    return sql_db.get_all_schemas(db_name, db_type, host, user, password)
+    connection = sqlite3.connect(db_name)
+    cursor = connection.cursor()
+    schemas = {}
+    
+    try:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        for table_name in tables:
+            cursor.execute(f"PRAGMA table_info({table_name[0]});")
+            columns = cursor.fetchall()
+            schemas[table_name[0]] = [column[1] for column in columns]  # Assuming column[1] has the column name
+    except Exception as e:
+        print(f"Error retrieving schemas: {e}")
+    finally:
+        connection.close()
+        
+    return schemas
+
 
 def save_temp_file(uploaded_file) -> str:
     """Save the uploaded database file temporarily."""
@@ -47,30 +63,108 @@ def save_temp_file(uploaded_file) -> str:
     with open(temp_file_path, "wb") as f:
         f.write(uploaded_file.read())
     return temp_file_path
-
 def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) -> str:
-    """Generate SQL query using the provided message and schemas for all tables."""
+    """Generate SQL query using the provided message and schemas for all tables, handling ambiguity and explaining the path chosen."""
     formatted_system_message = SYSTEM_MESSAGE.format(
         schemas=json.dumps(schemas, indent=2)
     )
     
+    decision_log = []  # Store reasoning for each path considered
+    paths_summary = []  # To keep track of the paths considered for summary
+    decision_flow = []  # To track the path taken for flowchart, now with tables and columns
+
     for attempt in range(max_attempts):
         response = get_completion_from_messages(formatted_system_message, user_message)
+        
         try:
             json_response = json.loads(response)
-            query = json_response.get('query', None)  # Default to None if 'query' is not found
-            
+            query = json_response.get('query', None)
+            error = json_response.get('error', None)
+            paths_considered = json_response.get('paths_considered', [])
+            final_choice = json_response.get('final_choice', '')
+            tables_and_columns = json_response.get('tables_and_columns', [])  # New field
+
+            # Log and track decisions for the flowchart
+            decision_flow.append(f"Attempt {attempt + 1}: Received Response")
+
+            if error:
+                decision_log.append(f"**Attempt {attempt + 1}**: Error occurred: {error}. Retrying...")
+                decision_flow.append(f"Error: {error}.")
+                continue
+
             if query is None:
-                return json.dumps({"error": "No query generated."})
+                decision_log.append(f"**Attempt {attempt + 1}**: No valid SQL query was generated. Retrying with more details...")
+                decision_flow.append("No valid SQL query. Retry.")
+                continue
+
+            # Log paths considered by OpenAI (if available)
+            if paths_considered:
+                for path in paths_considered:
+                    tables = ', '.join(path['tables'])
+                    paths_summary.append(f"Path considered: {path['description']} involved the tables: {tables}.")
+                    decision_log.append(f"**Attempt {attempt + 1}**: Path chosen - {path['description']} using tables {tables}.")
+                    decision_flow.append(f"Path: {path['description']} using tables: {tables}")
+
+            if tables_and_columns:
+                # Log the tables and columns passed through
+                for entry in tables_and_columns:
+                    table = entry['table']
+                    columns = ', '.join(entry['columns'])
+                    decision_log.append(f"**Attempt {attempt + 1}**: Passed through table `{table}` with columns {columns}.")
+                    decision_flow.append(f"Table: {table} | Columns: {columns}")
+
+            # Log the entire path of tables for the final query
+            final_tables = [entry['table'] for entry in tables_and_columns]
+            decision_log.append(f"**Final Path of Tables**: {', '.join(final_tables)}.")
+
+            if final_choice:
+                decision_log.append(f"**Final Decision**: The final path chosen was: {final_choice}.")
+                decision_flow.append(f"Final Path: {final_choice}")
 
             if validate_sql_query(query):
-                return response
+                decision_log.append(f"**Validation**: The generated SQL query was successfully validated.")
+                decision_flow.append("Query validated successfully.")
+                
+                # Create natural language summary of the decision log
+                natural_language_summary = get_natural_language_summary(query, paths_summary)
+                decision_log.append("### Decision Log Summary:")
+                decision_log.append(natural_language_summary)
+
+                return json.dumps({
+                    "query": query,
+                    "decision_log": decision_log,
+                    "decision_flow": decision_flow,
+                    
+                })
             else:
-                user_message += " Please ensure the query is valid SQL and try again."
+                user_message += " Please ensure that the query adheres to valid SQL syntax."
+                decision_flow.append("Invalid SQL syntax. Retry.")
+
         except json.JSONDecodeError:
-            user_message += " The response was not valid JSON. Please try again."
+            decision_log.append(f"**Attempt {attempt + 1}**: Failed to decode JSON. Retrying...")
+            user_message += " The response was not valid JSON. Please provide additional clarity."
+            decision_log.append(f"Raw response received: {response}")
+            decision_flow.append(f"JSON decode error.")
+
+    return json.dumps({
+        "error": "Failed to generate a valid SQL query after multiple attempts.",
+        "decision_log": decision_log,  # Return the flow even on failure
+    })
+
+
+def get_natural_language_summary(query: str, paths_summary: list) -> str:
+    """Generate a natural language summary using OpenAI based on the query and paths considered."""
+    summary_prompt = (
+        f"Given the SQL query: '{query}', the paths considered for generating this query were:\n"
+        f"{' '.join(paths_summary)}\n"
+        f"Please provide a concise natural language explanation of the decision-making process."
+    )
+
+    # Call OpenAI API to generate the natural language summary
+    response = get_completion_from_messages(SYSTEM_MESSAGE, summary_prompt)
     
-    return json.dumps({"error": "Failed to generate a valid SQL query after multiple attempts."})
+    # Provide a human-readable summary, or fallback if the response is empty
+    return response.strip() if response else "Summary generation failed."
 
 
 def create_chart(df: pd.DataFrame, chart_type: str, x_col: str, y_col: str) -> alt.Chart:
@@ -117,11 +211,12 @@ def display_summary_statistics(df: pd.DataFrame) -> None:
     st.write(df.describe())
 
 def handle_query_response(response: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> None:
-    """Process the API response and display query results and charts."""
+    """Process the API response and display query results, charts, and decision flow."""
     try:
         json_response = json.loads(response)
         query = json_response.get('query', '')
         error = json_response.get('error', '')
+        decision_log = json_response.get('decision_log', [])
 
         if error:
             st.error(f"Error generating SQL query: {error}")
@@ -134,23 +229,29 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
         st.success("SQL Query generated successfully!")
         st.code(query, language="sql")
 
+        # Display decision log with paths and reasons
+        if decision_log:
+            st.subheader("Decision Log")
+            for log in decision_log:
+                st.write(log)
+
         sql_results = get_data(query, db_name, db_type, host, user, password)
         
         if sql_results.empty:
             st.warning("The query returned no results.")
             return
-        
+
         # Check for duplicate column names
         if sql_results.columns.duplicated().any():
             st.error("The query returned a DataFrame with duplicate column names. Please modify your query to avoid this.")
             return
-        
+
         # Convert object columns to datetime if possible
         for col in sql_results.select_dtypes(include=['object']):
             try:
                 sql_results[col] = pd.to_datetime(sql_results[col])
             except ValueError:
-                continue # Skip columns that cannot be converted
+                continue  # Skip columns that cannot be converted
 
         st.subheader("Query Results:")
         filtered_results = dataframe_explorer(sql_results, case=False)
@@ -188,6 +289,19 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
         st.error("Failed to decode the response. Please try again.")
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
+
+def generate_flowchart(decision_flow: list) -> Digraph:
+    """Generate a flowchart based on the decision flow."""
+    flowchart = Digraph(comment='Decision Flow')
+
+    for index, step in enumerate(decision_flow):
+        flowchart.node(str(index), step)  # Create a node for each step
+
+        # Create edges between consecutive steps
+        if index > 0:
+            flowchart.edge(str(index - 1), str(index))
+
+    return flowchart
 
 
 def validate_sql_query(query: str) -> bool:
@@ -232,22 +346,6 @@ def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
     else:
         st.error("Selected export format is not supported.")
 
-def visualize_schema(schema: dict) -> None:
-    """Visualize the database schema using Graphviz."""
-    dot = Digraph(comment='Database Schema')
-    
-    for table_name, table_info in schema.items():
-        dot.node(table_name, table_name, shape='box')
-        for column in table_info.get('columns', []):
-            dot.node(f"{table_name}.{column['name']}", column['name'], shape='ellipse')
-            dot.edge(table_name, f"{table_name}.{column['name']}")
-
-    # Render the graph
-    dot.format = 'png'
-    dot.render('schema', cleanup=True)
-    
-    # Display the graph in Streamlit
-    st.image('schema.png', caption='Database Schema Visualization')
     
 # Streamlit App Layout
 db_type = st.sidebar.selectbox("Select Database Type", options=["SQLite", "PostgreSQL"])
@@ -267,7 +365,7 @@ if db_type == "SQLite":
                     with st.expander(f"View Schema: {table}", expanded=False):
                         st.json(schemas[table])
 
-                user_message = st.chat_input("Enter your query message:", key="user_message")
+                user_message = st.text_input("Enter your query message:", key="user_message")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
                         response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
