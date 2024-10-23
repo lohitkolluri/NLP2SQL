@@ -1,25 +1,19 @@
-import streamlit as st
-import pandas as pd
-import json
-import altair as alt
-import sql_db
 import os
-import openai
 import re
-from azure_openai import get_completion_from_messages
+import json
+
+import pandas as pd
+import streamlit as st
+import altair as alt
 from dotenv import load_dotenv
-from prompts.prompts import SYSTEM_MESSAGE
-from streamlit_extras.dataframe_explorer import dataframe_explorer
-from streamlit_extras.chart_container import chart_container
 from graphviz import Digraph
-import sqlite3
+import sql_db
 
-
-load_dotenv()
-openai.api_type = "azure"
-openai.api_base = os.getenv("OPENAI_ENDPOINT")
-openai.api_version = "2023-03-15-preview"
-openai.api_key = os.getenv("OPENAI_API_KEY")
+from sql_db import *
+from prompts.prompts import SYSTEM_MESSAGE
+from streamlit_extras.chart_container import chart_container
+from streamlit_extras.dataframe_explorer import dataframe_explorer
+from azure_openai import get_completion_from_messages
 
 st.set_page_config(page_icon="🗃️", page_title="Chat with Your DB", layout="centered")
 
@@ -35,27 +29,6 @@ def get_data(query: str, db_name: str, db_type: str, host: str = None, user: str
     """Fetch results from the database based on the provided SQL query."""
     return sql_db.query_database(query, db_name, db_type, host, user, password)
 
-@st.cache_resource
-def get_all_schemas(db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> dict:
-    """Retrieve schema representation of all tables in the database."""
-    connection = sqlite3.connect(db_name)
-    cursor = connection.cursor()
-    schemas = {}
-    
-    try:
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        for table_name in tables:
-            cursor.execute(f"PRAGMA table_info({table_name[0]});")
-            columns = cursor.fetchall()
-            schemas[table_name[0]] = [column[1] for column in columns]  # Assuming column[1] has the column name
-    except Exception as e:
-        print(f"Error retrieving schemas: {e}")
-    finally:
-        connection.close()
-        
-    return schemas
-
 
 def save_temp_file(uploaded_file) -> str:
     """Save the uploaded database file temporarily."""
@@ -63,16 +36,15 @@ def save_temp_file(uploaded_file) -> str:
     with open(temp_file_path, "wb") as f:
         f.write(uploaded_file.read())
     return temp_file_path
+    
 def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) -> str:
     """Generate SQL query using the provided message and schemas for all tables, handling ambiguity and explaining the path chosen."""
     formatted_system_message = SYSTEM_MESSAGE.format(
         schemas=json.dumps(schemas, indent=2)
     )
-    
-    decision_log = []  # Store reasoning for each path considered
-    paths_summary = []  # To keep track of the paths considered for summary
-    decision_flow = []  # To track the path taken for flowchart, now with tables and columns
-
+    decision_log = []
+    paths_summary = []
+    decision_flow = []
     for attempt in range(max_attempts):
         response = get_completion_from_messages(formatted_system_message, user_message)
         
@@ -82,7 +54,7 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
             error = json_response.get('error', None)
             paths_considered = json_response.get('paths_considered', [])
             final_choice = json_response.get('final_choice', '')
-            tables_and_columns = json_response.get('tables_and_columns', [])  # New field
+            tables_and_columns = json_response.get('tables_and_columns', [])
 
             # Log and track decisions for the flowchart
             decision_flow.append(f"Attempt {attempt + 1}: Received Response")
@@ -134,7 +106,6 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
                     "query": query,
                     "decision_log": decision_log,
                     "decision_flow": decision_flow,
-                    
                 })
             else:
                 user_message += " Please ensure that the query adheres to valid SQL syntax."
@@ -295,7 +266,7 @@ def generate_flowchart(decision_flow: list) -> Digraph:
     flowchart = Digraph(comment='Decision Flow')
 
     for index, step in enumerate(decision_flow):
-        flowchart.node(str(index), step)  # Create a node for each step
+        flowchart.node(str(index), step)
 
         # Create edges between consecutive steps
         if index > 0:
@@ -307,23 +278,23 @@ def generate_flowchart(decision_flow: list) -> Digraph:
 def validate_sql_query(query: str) -> bool:
     """Check the SQL query for validity and potentially harmful commands."""
     if not isinstance(query, str):
-        return False  # Ensure query is a string
-    
+        return False
+        
     # List of disallowed keywords (case-insensitive)
     disallowed = r'\b(DROP|DELETE|INSERT|UPDATE|ALTER|CREATE|EXEC)\b'
-    
+        
     # Check for disallowed keywords
     if re.search(disallowed, query, re.IGNORECASE):
         return False
-    
+        
     # Basic syntax checks
     if not query.strip().lower().startswith(('select', 'with')):
         return False
-    
+        
     # Check for balanced parentheses
     if query.count('(') != query.count(')'):
         return False
-    
+        
     return True
 
 
@@ -346,7 +317,7 @@ def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
     else:
         st.error("Selected export format is not supported.")
 
-    
+        
 # Streamlit App Layout
 db_type = st.sidebar.selectbox("Select Database Type", options=["SQLite", "PostgreSQL"])
 if db_type == "SQLite":
@@ -420,7 +391,7 @@ with st.sidebar.expander("Query History", expanded=False):
         for i, (past_query, timestamp) in enumerate(zip(st.session_state.query_history, st.session_state.query_timestamps), 1):
             st.markdown(f"**Query {i}:** {past_query} \n*Executed on: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}*")
             if st.button(f"Re-run Query {i}", key=f"rerun_query_{i}"):
-                user_message = past_query # Set the user message to the selected query
+                user_message = past_query
                 with st.spinner('Generating SQL query...'):
                     response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
                     handle_query_response(response, db_file if db_type == "SQLite" else postgres_db, db_type, host=postgres_host if db_type == "PostgreSQL" else None, user=postgres_user if db_type == "PostgreSQL" else None, password=postgres_password if db_type == "PostgreSQL" else None)
