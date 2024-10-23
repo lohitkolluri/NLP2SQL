@@ -11,7 +11,13 @@ openai.api_base = os.getenv("OPENAI_ENDPOINT")
 openai.api_version = "2023-03-15-preview"
 openai.api_key = os.getenv("OPENAI_API_KEY")  
 
-def get_completion_from_messages(system_message, user_message, model="NLP2SQL", temperature=0, max_tokens=500) -> str:
+def get_completion_from_messages(
+    system_message: str, 
+    user_message: str, 
+    model: str = "NLP2SQL", 
+    temperature: float = 0, 
+    max_tokens: int = 500
+) -> str:
     """
     Generate a completion response from OpenAI's API based on the given system and user messages.
     
@@ -29,7 +35,7 @@ def get_completion_from_messages(system_message, user_message, model="NLP2SQL", 
     # Create the messages list containing the system and user messages
     messages = [
         {'role': 'system', 'content': system_message},
-        {'role': 'user', 'content': f"{user_message}"}
+        {'role': 'user', 'content': user_message}
     ]
     
     # Generate a completion response from the OpenAI API
@@ -37,7 +43,7 @@ def get_completion_from_messages(system_message, user_message, model="NLP2SQL", 
         engine=model,
         messages=messages,
         temperature=temperature, 
-        max_tokens=max_tokens, 
+        max_tokens=max_tokens
     )
     
     # Return the content of the generated response
