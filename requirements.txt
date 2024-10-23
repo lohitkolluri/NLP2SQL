@@ -6,3 +6,4 @@ openai==0.28
 streamlit-extras
 sqlalchemy
 psycopg2-binary
+graphviz
