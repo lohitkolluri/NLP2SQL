@@ -1,5 +1,5 @@
 .env
-/_pycache_/
+__pycache__
 mydatabase.db
 temp_database.db
 .DS_Store
