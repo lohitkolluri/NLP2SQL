@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 
 import pandas as pd
 import streamlit as st
@@ -85,16 +86,11 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
                     decision_log.append(f"**Attempt {attempt + 1}**: Passed through table `{table}` with columns {columns}.")
                     decision_flow.append(f"Table: {table} | Columns: {columns}")
 
-            # Log the entire path of tables for the final query
-            final_tables = [entry['table'] for entry in tables_and_columns]
-            decision_log.append(f"**Final Path of Tables**: {', '.join(final_tables)}.")
-
             if final_choice:
                 decision_log.append(f"**Final Decision**: The final path chosen was: {final_choice}.")
                 decision_flow.append(f"Final Path: {final_choice}")
 
             if validate_sql_query(query):
-                decision_log.append(f"**Validation**: The generated SQL query was successfully validated.")
                 decision_flow.append("Query validated successfully.")
                 
                 # Create natural language summary of the decision log
@@ -202,7 +198,6 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
 
         # Display decision log with paths and reasons
         if decision_log:
-            st.subheader("Decision Log")
             for log in decision_log:
                 st.write(log)
 
