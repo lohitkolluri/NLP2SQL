@@ -2,7 +2,7 @@ streamlit
 pandas
 altair
 python-dotenv
-openai==0.28
+openai
 streamlit-extras
 sqlalchemy
 psycopg2-binary

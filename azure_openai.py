@@ -1,15 +1,15 @@
 import os  
-import openai  
+from openai import AzureOpenAI
 from dotenv import load_dotenv  
 
-# Load environment variables from a .env file
+
 load_dotenv()
 
+client = AzureOpenAI(azure_endpoint=os.getenv("OPENAI_ENDPOINT"),
+api_version="2023-03-15-preview",
+api_key=os.getenv("OPENAI_API_KEY"))  
+
 # Set OpenAI API configuration using environment variables
-openai.api_type = "azure"
-openai.api_base = os.getenv("OPENAI_ENDPOINT")  
-openai.api_version = "2023-03-15-preview"
-openai.api_key = os.getenv("OPENAI_API_KEY")  
 
 def get_completion_from_messages(
     system_message: str, 
@@ -31,20 +31,18 @@ def get_completion_from_messages(
     Returns:
     - str: The content of the generated response.
     """
-    
+
     # Create the messages list containing the system and user messages
     messages = [
         {'role': 'system', 'content': system_message},
         {'role': 'user', 'content': user_message}
     ]
-    
+
     # Generate a completion response from the OpenAI API
-    response = openai.ChatCompletion.create(
-        engine=model,
-        messages=messages,
-        temperature=temperature, 
-        max_tokens=max_tokens
-    )
-    
+    response = client.chat.completions.create(model=model,
+    messages=messages,
+    temperature=temperature, 
+    max_tokens=max_tokens)
+
     # Return the content of the generated response
-    return response.choices[0].message["content"]
+    return response.choices[0].message.content
