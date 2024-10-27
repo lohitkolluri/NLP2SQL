@@ -118,13 +118,12 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
         "decision_log": decision_log,  # Return the flow even on failure
     })
 
-
 def get_natural_language_summary(query: str, paths_summary: list) -> str:
     """Generate a natural language summary using OpenAI based on the query and paths considered."""
     summary_prompt = (
-        f"Given the SQL query: '{query}', the paths considered for generating this query were:\n"
+        f"Given the SQL query: '{query}', outline the various paths considered during the generation of this query was achieved in a clean, step-by-step format, using bullet points. Additionally, recommend the most suitable type of visualization chart from the following options: Bar Chart, Line Chart, Scatter Plot, Area Chart, and Histogram. For the recommended chart, specify the most appropriate values for the X-axis and Y-axis.\n"
         f"{' '.join(paths_summary)}\n"
-        f"Please provide a concise natural language explanation of the decision-making process."
+        f"Please provide a concise natural language explanation of the decision-making process for the query no explanation needed for visualisation."
     )
 
     # Call OpenAI API to generate the natural language summary
