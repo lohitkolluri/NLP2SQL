@@ -8,6 +8,8 @@ import streamlit as st
 import altair as alt
 from dotenv import load_dotenv
 from graphviz import Digraph
+import streamlit_nested_layout
+from streamlit_extras.colored_header import colored_header  # Import colored_header
 
 from sql_db import *
 from prompts.prompts import SYSTEM_MESSAGE
@@ -27,7 +29,6 @@ load_css("style.css")
 def get_data(query: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> pd.DataFrame:
     """Fetch results from the database based on the provided SQL query."""
     return sql_db.query_database(query, db_name, db_type, host, user, password)
-
 
 def save_temp_file(uploaded_file) -> str:
     """Save the uploaded database file temporarily."""
@@ -111,7 +112,7 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
         "error": "Failed to generate a valid SQL query after multiple attempts.",
         "decision_log": decision_log,  
     })
-
+    
 def get_natural_language_summary(query: str, paths_summary: list) -> str:
     summary_prompt = (
         f"Given the SQL query: '{query}', outline the various paths considered during the generation of this query in a clean, step-by-step format, using bullet points. Additionally, recommend the most suitable type of visualization chart from the following options: Bar Chart, Line Chart, Scatter Plot, Area Chart, and Histogram. For the recommended chart, specify the most appropriate values for the X-axis and Y-axis.\n"
@@ -166,7 +167,6 @@ def create_chart(df: pd.DataFrame, chart_type: str, x_col: str, y_col: str) -> a
         return None
 
 def display_summary_statistics(df: pd.DataFrame) -> None:
-    st.markdown("## Summary Statistics")
     st.write(df.describe())
 
 def handle_query_response(response: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> None:
@@ -186,12 +186,13 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
             return
 
         st.success("SQL Query generated successfully!")
+        colored_header("SQL Query and Summary:", color_name="red-70",description="")
         st.code(query, language="sql")
 
         # Display decision log with paths and reasons
         if decision_log:
             for log in decision_log:
-                st.markdown(log)
+                st.write(log)
 
         sql_results = get_data(query, db_name, db_type, host, user, password)
         
@@ -211,10 +212,11 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
             except ValueError:
                 continue  # Skip columns that cannot be converted
 
-        st.subheader("Query Results:")
+        colored_header("Query Results and Filter:", color_name="red-70",description="")
         filtered_results = dataframe_explorer(sql_results, case=False)
         st.dataframe(filtered_results, use_container_width=True)
 
+        colored_header("Summary Statistics and Export Options:", color_name="red-70",description="")
         display_summary_statistics(filtered_results)
 
         if len(filtered_results.columns) >= 2:
@@ -222,7 +224,7 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
             x_col = st.sidebar.selectbox("Select X-axis Column", options=filtered_results.columns)
             y_col = st.sidebar.selectbox("Select Y-axis Column", options=filtered_results.columns)
             chart_type = st.sidebar.selectbox("Select Chart Type", options=["None", "Bar Chart", "Line Chart", "Scatter Plot", "Area Chart", "Histogram"])
-            
+
             if chart_type != "None" and x_col != y_col:
                 chart = create_chart(filtered_results, chart_type, x_col, y_col)
                 if chart:
@@ -231,10 +233,6 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
 
         export_format = st.selectbox("Select Export Format", options=["CSV", "Parquet"])
         export_results(filtered_results, export_format)
-
-        st.markdown("### Summary Report")
-        st.write(f"Number of rows: {len(filtered_results)}")
-        st.write(f"Columns: {', '.join(filtered_results.columns)}")
 
         if "query_history" not in st.session_state:
             st.session_state.query_history = []
@@ -247,7 +245,7 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
         st.error("Failed to decode the response. Please try again.")
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
-
+        
 def validate_sql_query(query: str) -> bool:
     """Check the SQL query for validity and potentially harmful commands."""
     if not isinstance(query, str):
@@ -255,19 +253,19 @@ def validate_sql_query(query: str) -> bool:
         
     # List of disallowed keywords (case-insensitive)
     disallowed = r'\b(DROP|DELETE|INSERT|UPDATE|ALTER|CREATE|EXEC)\b'
-        
+    
     # Check for disallowed keywords
     if re.search(disallowed, query, re.IGNORECASE):
         return False
-        
+    
     # Basic syntax checks
     if not query.strip().lower().startswith(('select', 'with')):
         return False
-        
+    
     # Check for balanced parentheses
     if query.count('(') != query.count(')'):
         return False
-        
+    
     return True
 
 
@@ -290,9 +288,8 @@ def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
     else:
         st.error("Selected export format is not supported.")
 
-        
+
 # Streamlit App Layout
-st.sidebar.markdown("## Database Selection")
 db_type = st.sidebar.selectbox("Select Database Type", options=["SQLite", "PostgreSQL"])
 if db_type == "SQLite":
     uploaded_file = st.sidebar.file_uploader("Upload SQLite Database", type=["db", "sqlite", "sql"])
@@ -305,16 +302,16 @@ if db_type == "SQLite":
         if table_names:
             selected_tables = st.sidebar.multiselect("Select Tables", options=table_names, format_func=lambda x: f"{x} 🗃")
             if selected_tables:
-                st.markdown(f"### Selected Tables: {', '.join(selected_tables)} 🗄")
+                colored_header(f"Selected Tables: {', '.join(selected_tables)}", color_name="red-70",description="")
                 for table in selected_tables:
                     with st.expander(f"View Schema: {table}", expanded=False):
                         st.json(schemas[table])
 
-                user_message = st.text_input("Enter your query message:", key="user_message")
+                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
                         response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
-                        handle_query_response(response, db_file, db_type='sqlite')
+                    handle_query_response(response, db_file, db_type='sqlite')
 
         else:
             st.info("No tables found in the database.")
@@ -322,11 +319,12 @@ if db_type == "SQLite":
         st.info("Please upload a database file to start.")
 
 elif db_type == "PostgreSQL":
-    st.sidebar.markdown("## PostgreSQL Connection Details")
-    postgres_host = st.sidebar.text_input("PostgreSQL Host")
-    postgres_db = st.sidebar.text_input("Database Name")
-    postgres_user = st.sidebar.text_input("Username")
-    postgres_password = st.sidebar.text_input("Password", type="password")
+    # Create a dropdown for PostgreSQL connection details
+    with st.sidebar.expander("PostgreSQL Connection Details", expanded=True):
+        postgres_host = st.text_input(placeholder = "PostgreSQL Host", label = "")
+        postgres_db = st.text_input(placeholder = "Database Name", label = "")
+        postgres_user = st.text_input(placeholder = "Username", label = "")
+        postgres_password = st.text_input(placeholder = "Password", type="password", label = "")
 
     if postgres_host and postgres_db and postgres_user and postgres_password:
         schemas = get_all_schemas(postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
@@ -335,40 +333,75 @@ elif db_type == "PostgreSQL":
         if table_names:
             selected_tables = st.sidebar.multiselect("Select Tables", options=table_names, format_func=lambda x: f"{x} 🗃")
             if selected_tables:
-                st.markdown(f"### Selected Tables: {', '.join(selected_tables)} 🗄")
+                colored_header("Selected Tables:", color_name="red-70", description ="")
+                st.markdown(f"<div class='title'>Selected Tables: {', '.join(selected_tables)} 🗄</div>", unsafe_allow_html=True)
                 for table in selected_tables:
                     with st.expander(f"View Schema: {table}", expanded=False):
                         st.json(schemas[table])
 
-                user_message = st.text_input("Enter your query message:", key="user_message")
+                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
                         response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
-                        handle_query_response(response, postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
+                    handle_query_response(response, postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
 
+            else:
+                st.info("No tables found in the database.")
         else:
             st.info("No tables found in the database.")
     else:
         st.info("Please fill in all PostgreSQL connection details to start.")
-
-# Query history in collapsible sidebar
+        
+# Enhanced Query History with Search, Pagination, and Collapsible Cards
 with st.sidebar.expander("Query History", expanded=False):
     if "query_history" in st.session_state and st.session_state.query_history:
-        st.markdown("### Saved Queries")
+        st.write("### Saved Queries")
+        
+        # Search bar to filter queries by keyword
+        search_query = st.text_input(placeholder = "Search Queries", label = "", key="search_query")
         query_history_df = pd.DataFrame({
             "Query": st.session_state.query_history,
             "Timestamp": pd.to_datetime(st.session_state.query_timestamps)
         })
 
-        # Display query history as a table
-        st.dataframe(query_history_df, use_container_width=True)
+        # Filter queries based on search input
+        if search_query:
+            query_history_df = query_history_df[query_history_df['Query'].str.contains(search_query, case=False)]
 
-        for i, (past_query, timestamp) in enumerate(zip(st.session_state.query_history, st.session_state.query_timestamps), 1):
-            st.markdown(f"**Query {i}:** {past_query} \n*Executed on: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}*")
-            if st.button(f"Re-run Query {i}", key=f"rerun_query_{i}"):
-                user_message = past_query
-                with st.spinner('Generating SQL query...'):
-                    response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
-                    handle_query_response(response, db_file if db_type == "SQLite" else postgres_db, db_type, host=postgres_host if db_type == "PostgreSQL" else None, user=postgres_user if db_type == "PostgreSQL" else None, password=postgres_password if db_type == "PostgreSQL" else None)
+        # Pagination setup
+        queries_per_page = 5
+        total_queries = len(query_history_df)
+        num_pages = (total_queries // queries_per_page) + (total_queries % queries_per_page > 0)
+        current_page = st.number_input("Page", min_value=1, max_value=num_pages, value=1)
+
+        start_index = (current_page - 1) * queries_per_page
+        end_index = start_index + queries_per_page
+        page_queries = query_history_df.iloc[start_index:end_index]
+
+        # Display each query in collapsible cards
+        for i, (past_query, timestamp) in page_queries.iterrows():
+            with st.expander(f"Query {i + 1}: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"):
+                st.write("**SQL Query:**")
+                st.code(past_query, language="sql")
+
+                # Re-run button for each query
+                if st.button(f"Re-run Query {i + 1}", key=f"rerun_query_{i}"):
+                    user_message = past_query
+                    with st.spinner('Re-running the saved SQL query...'):
+                        response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
+                        handle_query_response(response, db_file if db_type == "SQLite" else postgres_db, db_type, 
+                                             host=postgres_host if db_type == "PostgreSQL" else None, 
+                                             user=postgres_user if db_type == "PostgreSQL" else None, 
+                                             password=postgres_password if db_type == "PostgreSQL" else None)
+
+                # Delete button for each query
+                if st.button(f"Delete Query {i + 1}", key=f"delete_query_{i}"):
+                    st.session_state.query_history.pop(i)
+                    st.session_state.query_timestamps.pop(i)
+                    st.experimental_rerun()
+
+        # Display page navigation info
+        st.write(f"Page {current_page} of {num_pages}")
+        
     else:
         st.info("No query history available.")
