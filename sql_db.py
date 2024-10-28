@@ -24,15 +24,15 @@ def query_database(query, db_name, db_type, host=None, user=None, password=None)
     """Run an SQL query and return results in a DataFrame."""
     conn = create_connection(db_name, host, user, password)
     if conn is None:
-        return pd.DataFrame()  # Return an empty DataFrame if connection fails
+        return pd.DataFrame()
 
     try:
         df = pd.read_sql_query(query, conn)
     except Exception as e:
         print(f"Error executing query: {e}")
-        return pd.DataFrame()  # Return an empty DataFrame on query failure
+        return pd.DataFrame()
     finally:
-        conn.close()  # Ensure connection is closed
+        conn.close()
 
     return df
 
@@ -40,7 +40,7 @@ def get_all_schemas(db_name, db_type, host=None, user=None, password=None):
     """Retrieve schema representation of all tables in the database."""
     conn = create_connection(db_name, host, user, password)
     if conn is None:
-        return {}  # Return an empty dictionary if connection fails
+        return {}
 
     cursor = conn.cursor()
     schemas = {}
@@ -62,11 +62,11 @@ def get_all_schemas(db_name, db_type, host=None, user=None, password=None):
                 cursor.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';")
             
             columns = cursor.fetchall()
-            schema = {col[0]: col[1] for col in columns}  # Using dictionary comprehension for clarity
+            schema = {col[0]: col[1] for col in columns}
             schemas[table_name] = schema
     except Exception as e:
         print(f"Error retrieving schemas: {e}")
     finally:
-        conn.close()  # Ensure connection is closed
+        conn.close()
 
     return schemas

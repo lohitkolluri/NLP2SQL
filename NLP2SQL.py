@@ -1,14 +1,13 @@
 import os
 import re
 import json
-import time
+import sql_db
 
 import pandas as pd
 import streamlit as st
 import altair as alt
 from dotenv import load_dotenv
 from graphviz import Digraph
-import sql_db
 
 from sql_db import *
 from prompts.prompts import SYSTEM_MESSAGE
@@ -24,7 +23,6 @@ def load_css(file_name: str) -> None:
 
 load_css("style.css")
 
-
 @st.cache_data
 def get_data(query: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> pd.DataFrame:
     """Fetch results from the database based on the provided SQL query."""
@@ -37,7 +35,7 @@ def save_temp_file(uploaded_file) -> str:
     with open(temp_file_path, "wb") as f:
         f.write(uploaded_file.read())
     return temp_file_path
-    
+
 def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) -> str:
     """Generate SQL query using the provided message and schemas for all tables, handling ambiguity and explaining the path chosen."""
     formatted_system_message = SYSTEM_MESSAGE.format(
@@ -57,12 +55,11 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
             final_choice = json_response.get('final_choice', '')
             tables_and_columns = json_response.get('tables_and_columns', [])
 
-            # Log and track decisions for the flowchart
-            decision_flow.append(f"Attempt {attempt + 1}: Received Response")
+            decision_flow.append(f"**Attempt {attempt + 1}: Received Response**")
 
             if error:
-                decision_log.append(f"**Attempt {attempt + 1}**: Error occurred: {error}. Retrying...")
-                decision_flow.append(f"Error: {error}.")
+                decision_log.append(f"**Attempt {attempt + 1}**: Error occurred: `{error}`. Retrying...")
+                decision_flow.append(f"Error: `{error}`.")
                 continue
 
             if query is None:
@@ -70,32 +67,29 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
                 decision_flow.append("No valid SQL query. Retry.")
                 continue
 
-            # Log paths considered by OpenAI (if available)
             if paths_considered:
                 for path in paths_considered:
                     tables = ', '.join(path['tables'])
-                    paths_summary.append(f"Path considered: {path['description']} involved the tables: {tables}.")
-                    decision_log.append(f"**Attempt {attempt + 1}**: Path chosen - {path['description']} using tables {tables}.")
-                    decision_flow.append(f"Path: {path['description']} using tables: {tables}")
+                    paths_summary.append(f"Path considered: {path['description']} involved the tables: `{tables}`.")
+                    decision_log.append(f"**Attempt {attempt + 1}**: Path chosen - {path['description']} using tables `{tables}`.")
+                    decision_flow.append(f"Path: {path['description']} using tables: `{tables}`")
 
             if tables_and_columns:
-                # Log the tables and columns passed through
                 for entry in tables_and_columns:
                     table = entry['table']
                     columns = ', '.join(entry['columns'])
-                    decision_log.append(f"**Attempt {attempt + 1}**: Passed through table `{table}` with columns {columns}.")
-                    decision_flow.append(f"Table: {table} | Columns: {columns}")
+                    decision_log.append(f"**Attempt {attempt + 1}**: Passed through table `{table}` with columns `{columns}`.")
+                    decision_flow.append(f"Table: `{table}` | Columns: `{columns}`")
 
             if final_choice:
-                decision_log.append(f"**Final Decision**: The final path chosen was: {final_choice}.")
-                decision_flow.append(f"Final Path: {final_choice}")
+                decision_log.append(f"**Final Decision**: The final path chosen was: `{final_choice}`.")
+                decision_flow.append(f"Final Path: `{final_choice}`")
 
             if validate_sql_query(query):
-                decision_flow.append("Query validated successfully.")
+                decision_flow.append("**Query validated successfully.**")
                 
-                # Create natural language summary of the decision log
                 natural_language_summary = get_natural_language_summary(query, paths_summary)
-                decision_log.append("### Decision Log Summary:")
+                decision_log.append("")
                 decision_log.append(natural_language_summary)
 
                 return json.dumps({
@@ -110,70 +104,69 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
         except json.JSONDecodeError:
             decision_log.append(f"**Attempt {attempt + 1}**: Failed to decode JSON. Retrying...")
             user_message += " The response was not valid JSON. Please provide additional clarity."
-            decision_log.append(f"Raw response received: {response}")
+            decision_log.append(f"Raw response received: `{response}`")
             decision_flow.append(f"JSON decode error.")
 
     return json.dumps({
         "error": "Failed to generate a valid SQL query after multiple attempts.",
-        "decision_log": decision_log,  # Return the flow even on failure
+        "decision_log": decision_log,  
     })
 
 def get_natural_language_summary(query: str, paths_summary: list) -> str:
-    """Generate a natural language summary using OpenAI based on the query and paths considered."""
     summary_prompt = (
-        f"Given the SQL query: '{query}', outline the various paths considered during the generation of this query was achieved in a clean, step-by-step format, using bullet points. Additionally, recommend the most suitable type of visualization chart from the following options: Bar Chart, Line Chart, Scatter Plot, Area Chart, and Histogram. For the recommended chart, specify the most appropriate values for the X-axis and Y-axis.\n"
+        f"Given the SQL query: '{query}', outline the various paths considered during the generation of this query in a clean, step-by-step format, using bullet points. Additionally, recommend the most suitable type of visualization chart from the following options: Bar Chart, Line Chart, Scatter Plot, Area Chart, and Histogram. For the recommended chart, specify the most appropriate values for the X-axis and Y-axis.\n"
         f"{' '.join(paths_summary)}\n"
-        f"Please provide a concise natural language explanation of the decision-making process for the query no explanation needed for visualisation."
+        f"Please provide a concise natural language explanation of the decision-making process for the query no explanation needed for visualisation. Output should be in markdown."
     )
 
-    # Call OpenAI API to generate the natural language summary
     response = get_completion_from_messages(SYSTEM_MESSAGE, summary_prompt)
     
-    # Provide a human-readable summary, or fallback if the response is empty
-    return response.strip() if response else "Summary generation failed."
-
+    return response.strip() if response else "Summary Generation Failed."
 
 def create_chart(df: pd.DataFrame, chart_type: str, x_col: str, y_col: str) -> alt.Chart:
-    """Create a chart based on selected chart type and columns."""
     base_chart = alt.Chart(df).properties(width=600, height=400).configure_title(fontSize=18, fontWeight='bold', font='Roboto')
 
-    if chart_type == "Bar Chart":
-        chart = base_chart.mark_bar().encode(
-            x=alt.X(x_col, title=x_col),
-            y=alt.Y(y_col, title=y_col),
-            color=alt.Color(y_col, legend=None)
-        )
-    elif chart_type == "Line Chart":
-        chart = base_chart.mark_line().encode(
-            x=alt.X(x_col, title=x_col),
-            y=alt.Y(y_col, title=y_col),
-            color=alt.Color(y_col, legend=None)
-        )
-    elif chart_type == "Scatter Plot":
-        chart = base_chart.mark_circle().encode(
-            x=alt.X(x_col, title=x_col),
-            y=alt.Y(y_col, title=y_col),
-            tooltip=[x_col, y_col]
-        )
-    elif chart_type == "Area Chart":
-        chart = base_chart.mark_area().encode(
-            x=alt.X(x_col, title=x_col),
-            y=alt.Y(y_col, title=y_col),
-            tooltip=[x_col, y_col]
-        )
-    elif chart_type == "Histogram":
-        chart = base_chart.mark_bar().encode(
-            alt.X(x_col, bin=alt.Bin(maxbins=30), title=x_col),
-            y='count()'
-        )
-    else:
+    try:
+        if chart_type == "Bar Chart":
+            chart = base_chart.mark_bar().encode(
+                x=alt.X(x_col, title=x_col),
+                y=alt.Y(y_col, title=y_col),
+                color=alt.Color(y_col, legend=None)
+            )
+        elif chart_type == "Line Chart":
+            chart = base_chart.mark_line().encode(
+                x=alt.X(x_col, title=x_col),
+                y=alt.Y(y_col, title=y_col),
+                color=alt.Color(y_col, legend=None)
+            )
+        elif chart_type == "Scatter Plot":
+            chart = base_chart.mark_circle().encode(
+                x=alt.X(x_col, title=x_col),
+                y=alt.Y(y_col, title=y_col),
+                tooltip=[x_col, y_col]
+            )
+        elif chart_type == "Area Chart":
+            chart = base_chart.mark_area().encode(
+                x=alt.X(x_col, title=x_col),
+                y=alt.Y(y_col, title=y_col),
+                tooltip=[x_col, y_col]
+            )
+        elif chart_type == "Histogram":
+            chart = base_chart.mark_bar().encode(
+                alt.X(x_col, bin=alt.Bin(maxbins=30), title=x_col),
+                y='count()'
+            )
+        else:
+            st.warning("Chart type not recognized.")
+            return None
+
+        return chart
+    except Exception as e:
+        st.error(f"An error occurred while generating the chart: `{e}`")
         return None
 
-    return chart
-
 def display_summary_statistics(df: pd.DataFrame) -> None:
-    """Show summary statistics for the DataFrame."""
-    st.subheader("Summary Statistics")
+    st.markdown("## Summary Statistics")
     st.write(df.describe())
 
 def handle_query_response(response: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> None:
@@ -198,7 +191,7 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
         # Display decision log with paths and reasons
         if decision_log:
             for log in decision_log:
-                st.write(log)
+                st.markdown(log)
 
         sql_results = get_data(query, db_name, db_type, host, user, password)
         
@@ -239,7 +232,7 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
         export_format = st.selectbox("Select Export Format", options=["CSV", "Parquet"])
         export_results(filtered_results, export_format)
 
-        st.write("Summary Report:")
+        st.markdown("### Summary Report")
         st.write(f"Number of rows: {len(filtered_results)}")
         st.write(f"Columns: {', '.join(filtered_results.columns)}")
 
@@ -254,20 +247,6 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
         st.error("Failed to decode the response. Please try again.")
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
-
-def generate_flowchart(decision_flow: list) -> Digraph:
-    """Generate a flowchart based on the decision flow."""
-    flowchart = Digraph(comment='Decision Flow')
-
-    for index, step in enumerate(decision_flow):
-        flowchart.node(str(index), step)
-
-        # Create edges between consecutive steps
-        if index > 0:
-            flowchart.edge(str(index - 1), str(index))
-
-    return flowchart
-
 
 def validate_sql_query(query: str) -> bool:
     """Check the SQL query for validity and potentially harmful commands."""
@@ -313,6 +292,7 @@ def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
 
         
 # Streamlit App Layout
+st.sidebar.markdown("## Database Selection")
 db_type = st.sidebar.selectbox("Select Database Type", options=["SQLite", "PostgreSQL"])
 if db_type == "SQLite":
     uploaded_file = st.sidebar.file_uploader("Upload SQLite Database", type=["db", "sqlite", "sql"])
@@ -325,7 +305,7 @@ if db_type == "SQLite":
         if table_names:
             selected_tables = st.sidebar.multiselect("Select Tables", options=table_names, format_func=lambda x: f"{x} 🗃")
             if selected_tables:
-                st.markdown(f"<div class='title'>Selected Tables: {', '.join(selected_tables)} 🗄</div>", unsafe_allow_html=True)
+                st.markdown(f"### Selected Tables: {', '.join(selected_tables)} 🗄")
                 for table in selected_tables:
                     with st.expander(f"View Schema: {table}", expanded=False):
                         st.json(schemas[table])
@@ -342,6 +322,7 @@ if db_type == "SQLite":
         st.info("Please upload a database file to start.")
 
 elif db_type == "PostgreSQL":
+    st.sidebar.markdown("## PostgreSQL Connection Details")
     postgres_host = st.sidebar.text_input("PostgreSQL Host")
     postgres_db = st.sidebar.text_input("Database Name")
     postgres_user = st.sidebar.text_input("Username")
@@ -354,7 +335,7 @@ elif db_type == "PostgreSQL":
         if table_names:
             selected_tables = st.sidebar.multiselect("Select Tables", options=table_names, format_func=lambda x: f"{x} 🗃")
             if selected_tables:
-                st.markdown(f"<div class='title'>Selected Tables: {', '.join(selected_tables)} 🗄</div>", unsafe_allow_html=True)
+                st.markdown(f"### Selected Tables: {', '.join(selected_tables)} 🗄")
                 for table in selected_tables:
                     with st.expander(f"View Schema: {table}", expanded=False):
                         st.json(schemas[table])
@@ -373,7 +354,7 @@ elif db_type == "PostgreSQL":
 # Query history in collapsible sidebar
 with st.sidebar.expander("Query History", expanded=False):
     if "query_history" in st.session_state and st.session_state.query_history:
-        st.write("### Saved Queries")
+        st.markdown("### Saved Queries")
         query_history_df = pd.DataFrame({
             "Query": st.session_state.query_history,
             "Timestamp": pd.to_datetime(st.session_state.query_timestamps)
