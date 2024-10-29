@@ -1,4 +1,5 @@
 import os
+import io
 import re
 import json
 import sql_db
@@ -7,9 +8,8 @@ import pandas as pd
 import streamlit as st
 import altair as alt
 from dotenv import load_dotenv
-from graphviz import Digraph
 import streamlit_nested_layout
-from streamlit_extras.colored_header import colored_header  # Import colored_header
+from streamlit_extras.colored_header import colored_header 
 
 from sql_db import *
 from prompts.prompts import SYSTEM_MESSAGE
@@ -18,6 +18,7 @@ from streamlit_extras.dataframe_explorer import dataframe_explorer
 from azure_openai import get_completion_from_messages
 
 st.set_page_config(page_icon="🗃️", page_title="Chat with Your DB", layout="centered")
+
 
 def load_css(file_name: str) -> None:
     with open(file_name) as f:
@@ -115,10 +116,16 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
     
 def get_natural_language_summary(query: str, paths_summary: list) -> str:
     summary_prompt = (
-        f"Given the SQL query: '{query}', outline the various paths considered during the generation of this query in a clean, step-by-step format, using bullet points. Additionally, recommend the most suitable type of visualization chart from the following options: Bar Chart, Line Chart, Scatter Plot, Area Chart, and Histogram. For the recommended chart, specify the most appropriate values for the X-axis and Y-axis.\n"
+        f"Given the SQL query: '{query}', provide a comprehensive breakdown of the various paths considered for generating this query. "
+        f"Explain the decision-making process that led to selecting the specific path used, detailing each step in bullet-point format. "
+        f"If multiple paths were encountered, suggest strategies or criteria for resolving these conflicts effectively.\n\n "
+        f"Additionally, recommend the most suitable type of visualization chart from the following options: "
+        f"Bar Chart, Line Chart, Scatter Plot, Area Chart, and Histogram, with appropriate values specified for the X-axis and Y-axis.\n\n"
         f"{' '.join(paths_summary)}\n"
-        f"Please provide a concise natural language explanation of the decision-making process for the query no explanation needed for visualisation. Output should be in markdown."
+        f"Provide a concise natural language explanation of the decision-making process, as well as conflict-resolution suggestions, "
+        f"excluding any explanation of the visualization."
     )
+
 
     response = get_completion_from_messages(SYSTEM_MESSAGE, summary_prompt)
     
@@ -208,7 +215,7 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
         # Convert object columns to datetime if possible
         for col in sql_results.select_dtypes(include=['object']):
             try:
-                sql_results[col] = pd.to_datetime(sql_results[col])
+                sql_results[col] = pd.to_datetime(sql_results[col], format="%d/%m/%Y")
             except ValueError:
                 continue  # Skip columns that cannot be converted
 
@@ -231,7 +238,7 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
                     with chart_container(data=filtered_results, export_formats=["CSV", "Parquet"]):
                         st.altair_chart(chart)
 
-        export_format = st.selectbox("Select Export Format", options=["CSV", "Parquet"])
+        export_format = st.selectbox("Select Export Format", options=["CSV", "Excel", "JSON"])
         export_results(filtered_results, export_format)
 
         if "query_history" not in st.session_state:
@@ -268,7 +275,6 @@ def validate_sql_query(query: str) -> bool:
     
     return True
 
-
 def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
     """Enable exporting of results in selected format."""
     if export_format == "CSV":
@@ -278,16 +284,30 @@ def export_results(sql_results: pd.DataFrame, export_format: str) -> None:
             file_name='query_results.csv',
             mime='text/csv'
         )
-    elif export_format == "Parquet":
+    elif export_format == "Excel":
+        # Create a BytesIO buffer
+        excel_buffer = io.BytesIO()
+        # Write the DataFrame to the buffer
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            sql_results.to_excel(writer, index=False, sheet_name='Sheet1')
+        # Seek to the beginning of the stream
+        excel_buffer.seek(0)
+        # Create the download button
         st.download_button(
-            label="Download Results as Parquet",
-            data=sql_results.to_parquet(index=False),
-            file_name='query_results.parquet',
-            mime='application/parquet'
+            label="Download Results as Excel",
+            data=excel_buffer,
+            file_name='query_results.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    elif export_format == "JSON":
+        st.download_button(
+            label="Download Results as JSON",
+            data=sql_results.to_json(orient='records'),
+            file_name='query_results.json',
+            mime='application/json'
         )
     else:
         st.error("Selected export format is not supported.")
-
 
 # Streamlit App Layout
 db_type = st.sidebar.selectbox("Select Database Type", options=["SQLite", "PostgreSQL"])
@@ -307,7 +327,7 @@ if db_type == "SQLite":
                     with st.expander(f"View Schema: {table}", expanded=False):
                         st.json(schemas[table])
 
-                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="")
+                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Type your SQL query here...",label_visibility="hidden")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
                         response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
@@ -321,10 +341,10 @@ if db_type == "SQLite":
 elif db_type == "PostgreSQL":
     # Create a dropdown for PostgreSQL connection details
     with st.sidebar.expander("PostgreSQL Connection Details", expanded=True):
-        postgres_host = st.text_input(placeholder = "PostgreSQL Host", label = "")
-        postgres_db = st.text_input(placeholder = "Database Name", label = "")
-        postgres_user = st.text_input(placeholder = "Username", label = "")
-        postgres_password = st.text_input(placeholder = "Password", type="password", label = "")
+        postgres_host = st.text_input(placeholder = "PostgreSQL Host", label = "Host", label_visibility="hidden")
+        postgres_db = st.text_input(placeholder = "Database Name", label = "DB Name",label_visibility="hidden")
+        postgres_user = st.text_input(placeholder = "Username", label = "Username", label_visibility="hidden")
+        postgres_password = st.text_input(placeholder = "Password", type="password", label = "Password",label_visibility="hidden")
 
     if postgres_host and postgres_db and postgres_user and postgres_password:
         schemas = get_all_schemas(postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
@@ -339,7 +359,7 @@ elif db_type == "PostgreSQL":
                     with st.expander(f"View Schema: {table}", expanded=False):
                         st.json(schemas[table])
 
-                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="")
+                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Text Input", label_visibility="hidden")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
                         response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
@@ -358,7 +378,7 @@ with st.sidebar.expander("Query History", expanded=False):
         st.write("### Saved Queries")
         
         # Search bar to filter queries by keyword
-        search_query = st.text_input(placeholder = "Search Queries", label = "", key="search_query")
+        search_query = st.text_input(placeholder = "Search Queries", label = "Search Queries",label_visibility="hidden", key="search_query")
         query_history_df = pd.DataFrame({
             "Query": st.session_state.query_history,
             "Timestamp": pd.to_datetime(st.session_state.query_timestamps)

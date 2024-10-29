@@ -6,5 +6,5 @@ openai
 streamlit-extras
 sqlalchemy
 psycopg2-binary
-graphviz
 streamlit-nested-layout
+openpyxl 
