@@ -8,7 +8,8 @@ import altair as alt
 import streamlit as st
 import streamlit_nested_layout
 from dotenv import load_dotenv
-from streamlit_extras.colored_header import colored_header 
+from streamlit_extras.colored_header import colored_header
+import numpy as np
 
 from sql_db import *
 from prompts.prompts import SYSTEM_MESSAGE
@@ -223,12 +224,43 @@ def create_chart(df: pd.DataFrame, chart_type: str, x_col: str, y_col: str) -> a
 
 # Display summary statistics of a dataframe
 def display_summary_statistics(df: pd.DataFrame) -> None:
-    """
-    Function to display the summary statistics of a dataframe.
-    Arguments:
-    df : pd.DataFrame : dataframe to be used
-    """
-    st.write(df.describe())
+    if df.empty:
+        st.warning("The DataFrame is empty, unable to display summary statistics.")
+        return
+
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    non_numeric_cols = df.select_dtypes(exclude=[np.number]).columns
+
+    if numeric_cols.any():
+        numeric_stats = df[numeric_cols].describe().T
+        numeric_stats['median'] = df[numeric_cols].median()
+        numeric_stats['mode'] = df[numeric_cols].mode().iloc[0]
+        numeric_stats['iqr'] = numeric_stats['75%'] - numeric_stats['25%']
+        numeric_stats['skew'] = df[numeric_cols].skew()
+        numeric_stats['kurt'] = df[numeric_cols].kurt()
+
+        # Display numeric summary statistics with histograms
+        st.markdown("### Numeric Summary Statistics")
+        for col in numeric_cols:
+            st.markdown(f"#### {col}")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.dataframe(numeric_stats.loc[[col]].style.format("{:.2f}").highlight_max(axis=0, color="lightgreen"))
+                
+            with col2:
+                st.altair_chart(alt.Chart(df).mark_bar().encode(
+                    alt.X(col, bin=alt.Bin(maxbins=30), title=f"Distribution of {col}"),
+                    y='count()'
+                ).properties(width=350, height=200), use_container_width=True)
+
+    if non_numeric_cols.any():
+        st.markdown("### Categorical Data Insights")
+        for col in non_numeric_cols:
+            st.markdown(f"**{col} Frequency**")
+            freq_table = df[col].value_counts().reset_index()
+            freq_table.columns = ['Category', 'Count']
+            freq_table['Percentage'] = (freq_table['Count'] / len(df) * 100).round(2)
+            st.table(freq_table.style.format({"Percentage": "{:.2f}%"}))
 
 # Handle query response and display results
 def handle_query_response(response: str, db_name: str, db_type: str, host: str = None, user: str = None, password: str = None) -> None:
@@ -283,7 +315,7 @@ def handle_query_response(response: str, db_name: str, db_type: str, host: str =
 
         colored_header("Query Results and Filter:", color_name="blue-70", description="")
         filtered_results = dataframe_explorer(sql_results, case=False)
-        st.dataframe(filtered_results, use_container_width=True)
+        st.dataframe(filtered_results, use_container_width=True, height=600, width=1000)
 
         colored_header("Summary Statistics and Export Options:", color_name="blue-70", description="")
         display_summary_statistics(filtered_results)
