@@ -508,11 +508,6 @@ with st.sidebar.expander("Query History", expanded=False):
                                              user=postgres_user if db_type == "PostgreSQL" else None, 
                                              password=postgres_password if db_type == "PostgreSQL" else None)
 
-                if st.button(f"Delete Query {i + 1}", key=f"delete_query_{i}"):
-                    st.session_state.query_history.pop(i)
-                    st.session_state.query_timestamps.pop(i)
-                    st.experimental_rerun()
-
         st.write(f"Page {current_page} of {num_pages}")
         
     else:
