@@ -6,14 +6,17 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
 
 Here are some of the project's key features:
 
-- **Natural Language to SQL**: Convert text queries into SQL commands.
-- **Multi-Database Support**: Supports both SQLite and PostgreSQL.
-- **Interactive Data Explorer**: Utilize data explorer for filtering and analyzing query results.
-- **Dynamic Schema Representation**: Fetch and display database schemas dynamically.
-- **Custom Visualizations**: Generate charts and graphs (Bar, Line, Scatter, Area, Histogram).
-- **Export Options**: Export query results in CSV, Excel, or JSON formats.
-- **Query History**: Save and revisit previous queries for future use.
-- **Safe SQL Execution**: Validation to prevent execution of harmful SQL commands like `DROP`, `DELETE`, or `ALTER`.
+- **Natural Language to SQL**: Converts text-based user queries into SQL commands.
+- **Multi-Database Support**: Connects and operates with SQLite and PostgreSQL databases.
+- **Interactive Data Explorer**: Allows filtering and analysis of query results within an interactive data table.
+- **Dynamic Schema Representation**: Retrieves and displays database schemas, with options to select tables for queries.
+- **Custom Visualizations**: Offers a variety of chart types (Bar, Line, Scatter, Area, Histogram) for visualizing query results.
+- **Summary Statistics**: Displays numeric summary statistics (mean, median, mode, IQR, skewness, kurtosis) and categorical data insights for query results.
+- **Decision Log and Query Path Summary**: Provides a decision log detailing paths considered and chosen during query generation, explaining ambiguities and decisions made.
+- **Export Options**: Supports exporting query results in CSV, Excel, and JSON formats.
+- **Query History**: Saves and revisits past queries for easy future access.
+- **Safe SQL Execution**: Validates SQL queries to prevent harmful commands like `DROP`, `DELETE`, or `ALTER`.
+- **PostgreSQL Connection Configuration**: Allows configuration of host, database, user, and password for PostgreSQL databases.
 
 ## 🛠️ Installation Steps
 
@@ -73,34 +76,34 @@ Here are some of the project's key features:
 
 Technologies used in the project:
 
-- **Streamlit**: For building the interactive web application.
-- **Altair**: For creating data visualizations.
-- **Pandas**: For data manipulation.
-- **SQLite & PostgreSQL**: For database support.
-- **Azure OpenAI**: For converting natural language to SQL queries.
-- **Streamlit Extras**: Enhancing UI components like data explorer and chart containers.
-- **GPT-3.5 Turbo**: Language model used for query generation.
+- **Streamlit**: Powers the interactive web application.
+- **Altair**: Renders dynamic and customizable data visualizations.
+- **Pandas**: Provides robust data manipulation tools.
+- **SQLite & PostgreSQL**: Enables multi-database connectivity and support.
+- **Azure OpenAI**: Translates natural language queries into SQL commands.
+- **Streamlit Extras**: Enhances UI elements such as data exploration tables and chart containers.
+- **GPT-3.5 Turbo**: Provides intelligent language processing for query generation.
 
 ## 🚀 Additional Features
 
-- **Custom CSS Styling**: Improved the interface aesthetics with custom CSS.
-- **Schema Explorer**: View database schema before query execution.
-- **Database File Upload**: Upload SQLite databases directly into the app for querying.
-- **Collapsible Query History**: Re-run or review previous queries via a collapsible section.
-- **Summary Statistics**: Display summary statistics of query results.
-- **Dynamic Query Generation**: Handles ambiguity in user input and provides detailed decision logs.
+- **Custom CSS Styling**: Enhances interface aesthetics and user experience with tailored CSS.
+- **Schema Explorer**: Displays the database schema to guide query formulation.
+- **Database File Upload**: Allows users to upload SQLite database files directly for querying.
+- **Collapsible Query History**: Saves query history in a collapsible section for easy access and re-running of queries.
+- **Summary Statistics**: Provides detailed numeric and categorical summaries for query results.
+- **Dynamic Query Generation**: Manages ambiguous queries effectively, with decision logs explaining interpretation paths.
 
 ## 📝 How It Works
 
-The application allows users to type natural language queries, which are then processed to generate SQL commands. Key functionalities include:
+The application processes natural language queries, converting them into SQL commands to interact with connected databases. Key functionalities include:
 
-- **Loading Database Schemas**: Automatically fetch and display schemas for selected tables.
-- **Query Generation and Validation**: Generate SQL queries while ensuring they are safe to execute.
-- **Data Visualization**: Create visual representations of query results using Altair.
-- **Exporting Results**: Download query results in various formats (CSV, Excel, JSON).
-- **Interactive Elements**: Use Streamlit components for an interactive user experience.
+- **Loading Database Schemas**: Automatically retrieves and displays schemas, allowing users to select tables for querying.
+- **Query Generation and Validation**: Generates SQL queries with safety checks to prevent destructive commands.
+- **Data Visualization**: Creates rich visual representations of data with a range of chart options, powered by Altair.
+- **Exporting Results**: Allows users to download query results in multiple formats (CSV, Excel, JSON).
+- **Interactive Elements**: Utilizes Streamlit components for a responsive and intuitive user experience.
 
-The application is designed to enhance data interaction by enabling users to explore and visualize their databases effortlessly.
+This application is designed to simplify data interaction, enabling users to explore and visualize their databases effortlessly.
 
 ## 🖼️ Diagram
 

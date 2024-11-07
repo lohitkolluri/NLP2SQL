@@ -21,7 +21,7 @@ from azure_openai import get_completion_from_messages
 st.set_page_config(
     page_icon="🗃️", 
     page_title="Chat with Your DB", 
-    layout="wide"  # Changed to 'wide' for improved layout
+    layout="wide"
 )
 
 # Load custom CSS for styling
@@ -31,7 +31,7 @@ def load_css(file_name: str) -> None:
     Arguments:
     file_name : str : name of the CSS file
     """
-    with open('style.css') as f:
+    with open(file_name) as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 load_css("style.css")
@@ -145,6 +145,7 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
         "error": "Failed to generate a valid SQL query after multiple attempts.",
         "decision_log": decision_log,  
     })
+
 # Generate natural language summary of decision process
 def get_natural_language_summary(query: str, paths_summary: list) -> str:
     """
@@ -153,7 +154,6 @@ def get_natural_language_summary(query: str, paths_summary: list) -> str:
     query : str : the generated SQL query
     paths_summary : list : list of paths considered
     """
-    # Define a prompt for the natural language summary here (dependency on the language model)
     summary_prompt = (
         f"Given the SQL query: '{query}', provide a comprehensive breakdown of the various paths considered for generating this query. "
         f"Explain the decision-making process that led to selecting the specific path used, detailing each step in bullet-point format. "
