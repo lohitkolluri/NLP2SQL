@@ -3,5 +3,6 @@ __pycache__
 prompts/__pycache__/
 mydatabase.db
 temp_database.db
+sample_data.db
 .DS_Store
 sample.db
