@@ -6,15 +6,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 client = AzureOpenAI(azure_endpoint=os.getenv("OPENAI_ENDPOINT"),
-api_version="2023-03-15-preview",
-api_key=os.getenv("OPENAI_API_KEY"))  
+api_version=os.getenv("OPENAI_API_VERSION"),
+api_key=os.getenv("OPENAI_API_KEY"))
 
 # Set OpenAI API configuration using environment variables
 
 def get_completion_from_messages(
     system_message: str, 
     user_message: str, 
-    model: str = "NLP2SQL", 
+    model: str = os.getenv("MODEL_NAME"), 
     temperature: float = 0, 
     max_tokens: int = 500
 ) -> str:

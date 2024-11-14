@@ -19,8 +19,8 @@ from azure_openai import get_completion_from_messages
 
 # Set page configuration
 st.set_page_config(
-    page_icon="🗃️", 
-    page_title="Chat with Your DB", 
+    page_icon="🗃️",
+    page_title="Chat with Your DB",
     layout="wide"
 )
 
@@ -65,23 +65,22 @@ def save_temp_file(uploaded_file) -> str:
         f.write(uploaded_file.read())
     return temp_file_path
 
+# Cache the generate_sql_query function
+@st.cache_data
+def cached_generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) -> str:
+    return generate_sql_query(user_message, schemas, max_attempts)
+
 # Generate SQL query from user input
 def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) -> str:
-    """
-    Function to generate SQL query using the provided message and schemas for all tables, handling ambiguity and explaining the path chosen.
-    Arguments:
-    user_message : str : user's message
-    schemas : dict : dictionary with schemas
-    max_attempts : int : maximum number of attempts
-    """
     formatted_system_message = SYSTEM_MESSAGE.format(schemas=json.dumps(schemas, indent=2))
     decision_log = []
     paths_summary = []
     decision_flow = []
+    paths_data = []
 
     for attempt in range(max_attempts):
         response = get_completion_from_messages(formatted_system_message, user_message)
-        
+
         try:
             json_response = json.loads(response)
             query = json_response.get('query', None)
@@ -103,11 +102,21 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
                 continue
 
             if paths_considered:
+                decision_log.append(f"**Attempt {attempt + 1}**: Considered the following paths:")
                 for path in paths_considered:
-                    tables = ', '.join(path['tables'])
-                    paths_summary.append(f"Path considered: {path['description']} involved the tables: `{tables}`.")
-                    decision_log.append(f"**Attempt {attempt + 1}**: Path chosen - {path['description']} using tables `{tables}`.")
-                    decision_flow.append(f"Path: {path['description']} using tables: `{tables}`")
+                    tables = path['tables']
+                    columns = [col for sublist in path['columns'] for col in sublist]
+                    paths_data.append({
+                        'description': path['description'],
+                        'tables': tables,
+                        'columns': columns,
+                        'score': len(tables) + len(columns)
+                    })
+                    tables_str = ', '.join(tables)
+                    columns_str = ', '.join(columns)
+                    paths_summary.append(f"Path considered: {path['description']} involved the tables: `{tables_str}` and columns: `{columns_str}`.")
+                    decision_log.append(f"- Path: {path['description']} using tables `{tables_str}` and columns `{columns_str}`.")
+                    decision_flow.append(f"Path: {path['description']} using tables: `{tables_str}` and columns: `{columns_str}`")
 
             if tables_and_columns:
                 for entry in tables_and_columns:
@@ -116,15 +125,17 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
                     decision_log.append(f"**Attempt {attempt + 1}**: Passed through table `{table}` with columns `{columns}`.")
                     decision_flow.append(f"Table: `{table}` | Columns: `{columns}`")
 
-            if final_choice:
-                decision_log.append(f"**Final Decision**: The final path chosen was: `{final_choice}`.")
-                decision_flow.append(f"Final Path: `{final_choice}`")
-
             if validate_sql_query(query):
                 decision_flow.append("**Query validated successfully.**")
                 natural_language_summary = get_natural_language_summary(query, paths_summary)
                 decision_log.append("")
                 decision_log.append(natural_language_summary)
+
+                if paths_data:
+                    best_path = min(paths_data, key=lambda x: x['score'])
+                    final_choice = best_path['description']
+                    decision_log.append(f"**Final Decision**: The best path chosen was: `{final_choice}`.")
+                    decision_flow.append(f"Best Path: `{final_choice}`")
 
                 return json.dumps({
                     "query": query,
@@ -141,9 +152,13 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
             decision_log.append(f"Raw response received: `{response}`")
             decision_flow.append(f"JSON decode error.")
 
+        except Exception as e:
+            decision_log.append(f"**Attempt {attempt + 1}**: An unexpected error occurred: `{str(e)}`. Retrying...")
+            decision_flow.append(f"Unexpected error: `{str(e)}`. Retry.")
+
     return json.dumps({
         "error": "Failed to generate a valid SQL query after multiple attempts.",
-        "decision_log": decision_log,  
+        "decision_log": decision_log,
     })
 
 # Generate natural language summary of decision process
@@ -166,7 +181,7 @@ def get_natural_language_summary(query: str, paths_summary: list) -> str:
     )
 
     response = get_completion_from_messages(SYSTEM_MESSAGE, summary_prompt)
-    
+
     return response.strip() if response else "Summary Generation Failed."
 
 # Create chart visualization
@@ -246,7 +261,7 @@ def display_summary_statistics(df: pd.DataFrame) -> None:
             col1, col2 = st.columns(2)
             with col1:
                 st.dataframe(numeric_stats.loc[[col]].style.format("{:.2f}").highlight_max(axis=0, color="lightgreen"))
-                
+
             with col2:
                 st.altair_chart(alt.Chart(df).mark_bar().encode(
                     alt.X(col, bin=alt.Bin(maxbins=30), title=f"Distribution of {col}"),
@@ -360,7 +375,7 @@ def validate_sql_query(query: str) -> bool:
         return False
 
     disallowed_keywords = r'\b(DROP|DELETE|INSERT|UPDATE|ALTER|CREATE|EXEC)\b'
-    
+
     if re.search(disallowed_keywords, query, re.IGNORECASE):
         return False
 
@@ -430,7 +445,7 @@ if db_type == "SQLite":
                 user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Type your SQL query here...", label_visibility="hidden")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
-                        response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
+                        response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
                     handle_query_response(response, db_file, db_type='sqlite')
 
         else:
@@ -461,7 +476,7 @@ elif db_type == "PostgreSQL":
                 user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Text Input", label_visibility="hidden")
                 if user_message:
                     with st.spinner('Generating SQL query...'):
-                        response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
+                        response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
                     handle_query_response(response, postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
 
             else:
@@ -475,7 +490,7 @@ elif db_type == "PostgreSQL":
 with st.sidebar.expander("Query History", expanded=False):
     if "query_history" in st.session_state and st.session_state.query_history:
         st.write("### Saved Queries")
-        
+
         search_query = st.text_input(placeholder="Search Queries", label="Search Queries", label_visibility="hidden", key="search_query")
         query_history_df = pd.DataFrame({
             "Query": st.session_state.query_history,
@@ -502,13 +517,13 @@ with st.sidebar.expander("Query History", expanded=False):
                 if st.button(f"Re-run Query {i + 1}", key=f"rerun_query_{i}"):
                     user_message = past_query
                     with st.spinner('Re-running the saved SQL query...'):
-                        response = generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
-                        handle_query_response(response, db_file if db_type == "SQLite" else postgres_db, db_type, 
-                                             host=postgres_host if db_type == "PostgreSQL" else None, 
-                                             user=postgres_user if db_type == "PostgreSQL" else None, 
+                        response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
+                        handle_query_response(response, db_file if db_type == "SQLite" else postgres_db, db_type,
+                                             host=postgres_host if db_type == "PostgreSQL" else None,
+                                             user=postgres_user if db_type == "PostgreSQL" else None,
                                              password=postgres_password if db_type == "PostgreSQL" else None)
 
         st.write(f"Page {current_page} of {num_pages}")
-        
+
     else:
         st.info("No query history available.")
