@@ -1,11 +1,28 @@
 import sqlite3
+from typing import Optional, Dict, Any
 import psycopg2
-from sqlite3 import Error
+from psycopg2 import OperationalError, sql
 import pandas as pd
+import logging
 
-def create_connection(db_name, host=None, user=None, password=None):
-    """Create or connect to a database."""
-    conn = None
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def create_connection(db_name: str, host: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None) -> Optional[Any]:
+    """
+    Create or connect to a database.
+
+    Parameters:
+    - db_name (str): Name of the database.
+    - host (Optional[str]): Host address (for PostgreSQL).
+    - user (Optional[str]): Username (for PostgreSQL).
+    - password (Optional[str]): Password (for PostgreSQL).
+
+    Returns:
+    - Optional[Any]: Database connection object or None if connection fails.
+    """
     try:
         if host:  # PostgreSQL connection
             conn = psycopg2.connect(
@@ -14,59 +31,115 @@ def create_connection(db_name, host=None, user=None, password=None):
                 password=password,
                 host=host
             )
+            logger.info("Connected to PostgreSQL database.")
         else:  # SQLite connection
             conn = sqlite3.connect(db_name)
+            logger.info("Connected to SQLite database.")
+        return conn
+    except OperationalError as e:
+        logger.error(f"Operational error while connecting to the database: {e}")
     except Exception as e:
-        print(f"Error connecting to the database: {e}")
-    return conn
+        logger.exception(f"Unexpected error while connecting to the database: {e}")
+    return None
 
-def query_database(query, db_name, db_type, host=None, user=None, password=None):
-    """Run an SQL query and return results in a DataFrame."""
+
+def query_database(query: str, db_name: str, db_type: str, host: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None) -> pd.DataFrame:
+    """
+    Execute an SQL query and return the results as a DataFrame.
+
+    Parameters:
+    - query (str): The SQL query to execute.
+    - db_name (str): Name of the database.
+    - db_type (str): Type of the database ('sqlite' or 'postgresql').
+    - host (Optional[str]): Host address (for PostgreSQL).
+    - user (Optional[str]): Username (for PostgreSQL).
+    - password (Optional[str]): Password (for PostgreSQL).
+
+    Returns:
+    - pd.DataFrame: Query results.
+    """
     conn = create_connection(db_name, host, user, password)
     if conn is None:
+        logger.error("Database connection failed. Returning empty DataFrame.")
         return pd.DataFrame()
 
     try:
-        df = pd.read_sql_query(query, conn)
+        if db_type.lower() == 'postgresql':
+            # Use psycopg2's RealDictCursor for better performance with pandas
+            df = pd.read_sql_query(query, conn)
+        elif db_type.lower() == 'sqlite':
+            df = pd.read_sql_query(query, conn)
+        else:
+            logger.error(f"Unsupported database type: {db_type}")
+            return pd.DataFrame()
+        logger.info("Query executed successfully.")
+        return df
     except Exception as e:
-        print(f"Error executing query: {e}")
+        logger.error(f"Error executing query: {e}")
         return pd.DataFrame()
     finally:
         conn.close()
+        logger.info("Database connection closed.")
 
-    return df
 
-def get_all_schemas(db_name, db_type, host=None, user=None, password=None):
-    """Retrieve schema representation of all tables in the database."""
+def get_all_schemas(db_name: str, db_type: str, host: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None) -> Dict[str, Dict[str, str]]:
+    """
+    Retrieve schema information for all tables in the database.
+
+    Parameters:
+    - db_name (str): Name of the database.
+    - db_type (str): Type of the database ('sqlite' or 'postgresql').
+    - host (Optional[str]): Host address (for PostgreSQL).
+    - user (Optional[str]): Username (for PostgreSQL).
+    - password (Optional[str]): Password (for PostgreSQL).
+
+    Returns:
+    - Dict[str, Dict[str, str]]: Schema details for each table.
+    """
     conn = create_connection(db_name, host, user, password)
     if conn is None:
+        logger.error("Database connection failed. Returning empty schemas.")
         return {}
 
     cursor = conn.cursor()
     schemas = {}
-    
+
     try:
-        # Get all table names
-        if db_type == 'sqlite':
+        if db_type.lower() == 'sqlite':
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        elif db_type == 'postgresql':
-            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';")
-        
+        elif db_type.lower() == 'postgresql':
+            cursor.execute("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public';
+            """)
+        else:
+            logger.error(f"Unsupported database type: {db_type}")
+            return schemas
+
         tables = cursor.fetchall()
-        
+
         for table in tables:
             table_name = table[0]
-            if db_type == 'sqlite':
-                cursor.execute(f"PRAGMA table_info({table_name});")
-            else:
-                cursor.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';")
-            
-            columns = cursor.fetchall()
-            schema = {col[0]: col[1] for col in columns}
+            if db_type.lower() == 'sqlite':
+                cursor.execute(f"PRAGMA table_info({sql.Identifier(table_name).string});")
+                columns = cursor.fetchall()
+                schema = {col[1]: col[2] for col in columns}
+            elif db_type.lower() == 'postgresql':
+                cursor.execute(sql.SQL("""
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
+                    WHERE table_name = %s;
+                """), [table_name])
+                columns = cursor.fetchall()
+                schema = {col[0]: col[1] for col in columns}
             schemas[table_name] = schema
+
+        logger.info("Schemas retrieved successfully.")
     except Exception as e:
-        print(f"Error retrieving schemas: {e}")
+        logger.error(f"Error retrieving schemas: {e}")
     finally:
         conn.close()
+        logger.info("Database connection closed.")
 
     return schemas
