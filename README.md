@@ -54,8 +54,10 @@ Here are some of the project's key features:
    Create a `.env` file in the root directory and add the necessary environment variables for Azure OpenAI API:
 
    ```env
-   OPENAI_ENDPOINT=https://your-azure-openai-endpoint
-   OPENAI_API_KEY=your-azure-openai-api-key
+   OPENAI_API_KEY="Your Azure OpenAI API Key"
+   OPENAI_ENDPOINT="Api Endpoint should look like https://name_of_openai_resource.openai.azure.com/"
+   OPENAI_API_VERSION="API Version"
+   MODEL_NAME="Name of Your Model from Azure OpenAI"
    ```
 
 5. **Running the App:**
