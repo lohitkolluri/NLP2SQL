@@ -119,10 +119,28 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
     Generate SQL query from user input with retry mechanism.
     """
     formatted_system_message = load_system_message(schemas)
-    decision_log = []
-    paths_summary = []
-    paths_data = []
+    decision_log_sections = {
+        "Query Input Details": [],
+        "Preprocessing Steps": [],
+        "Path Identification": [],
+        "Ambiguity Detection": [],
+        "Resolution Criteria": [],
+        "Chosen Path Explanation": [],
+        "Generated SQL Query": [],
+        "Alternative Paths": [],
+        "Execution Feedback": []
+    }
     visualization_recommendation = None
+
+    # Query Input Details
+    decision_log_sections["Query Input Details"].append(
+        f"`{user_message}`"
+    )
+
+    # Preprocessing Steps
+    decision_log_sections["Preprocessing Steps"].append(
+        "- **Normalization:** Converted user input to lowercase and stripped unnecessary whitespace."
+    )
 
     for attempt in range(max_attempts):
         response = get_completion_from_messages(formatted_system_message, user_message)
@@ -136,81 +154,107 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
             tables_and_columns = json_response.get('tables_and_columns', [])
             visualization_recommendation = json_response.get('visualization_recommendation')
 
-            decision_log.append(f"Attempt {attempt + 1}:")
-
             if error:
-                decision_log.append(f"Error encountered: {error}. Retrying...")
+                decision_log_sections["Execution Feedback"].append(
+                    f"**Attempt {attempt + 1}: Error encountered:** {error}. Retrying..."
+                )
                 continue
 
             if not query:
-                decision_log.append("No valid SQL query generated. Retrying...")
+                decision_log_sections["Execution Feedback"].append(
+                    f"**Attempt {attempt + 1}: No valid SQL query generated.** Retrying..."
+                )
                 continue
 
             if paths_considered:
-                decision_log.append("Paths Considered:")
+                decision_log_sections["Path Identification"].append(
+                    "- **Lists the multiple paths identified during query generation.**"
+                )
                 for idx, path in enumerate(paths_considered, start=1):
                     tables = path['tables']
                     columns = [col for sublist in path['columns'] for col in sublist]
-                    paths_data.append({
-                        'description': path['description'],
-                        'tables': tables,
-                        'columns': columns,
-                        'score': len(tables) + len(columns)
-                    })
-                    tables_str = ', '.join(tables)
-                    columns_str = ', '.join(columns)
-                    decision_log.append(f"{idx}. {path['description']} | Tables: {tables_str} | Columns: {columns_str}")
-                    paths_summary.append(f"Path {idx}: {path['description']} using `{tables_str}` and `{columns_str}`.")
+                    score = len(tables) + len(columns)
+                    decision_log_sections["Path Identification"].append(
+                        f"- **Path {idx}:** {path['description']} | Tables: `{', '.join(tables)}` | Columns: `{', '.join(columns)}` | Score: {score}"
+                    )
 
             if tables_and_columns:
-                decision_log.append("Tables and Columns Utilized:")
+                decision_log_sections["Chosen Path Explanation"].append(
+                    "- **Table Usage:** Justifies why the selected path was chosen over alternatives."
+                )
                 for entry in tables_and_columns:
                     table = entry['table']
                     columns = ', '.join(entry['columns'])
-                    decision_log.append(f"- `{table}`: {columns}")
+                    decision_log_sections["Chosen Path Explanation"].append(
+                        f"- **Table `{table}`:** Columns `{columns}` were utilized based on their relevance and data type compatibility."
+                    )
 
             if validate_sql_query(query):
-                decision_log.append("SQL query validation passed.")
-                
-                natural_language_summary = get_natural_language_summary(query, paths_summary)
-                decision_log.append("Decision Process Summary:")
-                decision_log.append(natural_language_summary)
+                decision_log_sections["Generated SQL Query"].append(
+                    f"```sql\n{query}\n```"
+                )
 
-                if paths_data:
-                    best_path = min(paths_data, key=lambda x: x['score'])
-                    final_choice = best_path['description']
-                    decision_log.append(f"Final Decision: Selected `{final_choice}` based on scoring.")
+                natural_language_summary = get_natural_language_summary(query, decision_log_sections["Path Identification"])
+                decision_log_sections["Resolution Criteria"].append(
+                    f"- **Summary:** {natural_language_summary}"
+                )
+
+                decision_log_sections["Execution Feedback"].append(
+                    "**SQL query validation passed.** Executing the query on the database."
+                )
 
                 return {
                     "query": query,
-                    "decision_log": "\n".join(decision_log),
+                    "decision_log": build_markdown_decision_log(decision_log_sections),
                     "visualization_recommendation": visualization_recommendation
                 }
             else:
-                decision_log.append("SQL query validation failed. Requesting revision.")
+                decision_log_sections["Execution Feedback"].append(
+                    f"**Attempt {attempt + 1}: SQL query validation failed.** Requesting revision."
+                )
                 user_message += " Please ensure the query adheres to valid SQL syntax."
 
         except json.JSONDecodeError:
-            decision_log.append("Failed to decode JSON response. Retrying...")
-            decision_log.append(f"Raw Response: `{response}`")
+            decision_log_sections["Execution Feedback"].append(
+                f"**Attempt {attempt + 1}: Failed to decode JSON response.** Retrying..."
+            )
+            decision_log_sections["Execution Feedback"].append(
+                f"**Raw Response:** `{response}`"
+            )
             user_message += " The response was not valid JSON. Provide additional clarity."
             continue
 
         except Exception as e:
-            decision_log.append(f"Unexpected error: `{e}`. Retrying...")
-            decision_log.append(f"Error Details: `{e}`")
+            decision_log_sections["Execution Feedback"].append(
+                f"**Attempt {attempt + 1}: Unexpected error:** `{e}`. Retrying..."
+            )
             continue
 
     # After all attempts failed
-    decision_log.append("Final Outcome:")
-    decision_log.append("Failed to generate a valid SQL query after multiple attempts.")
-    
+    decision_log_sections["Execution Feedback"].append("**Final Outcome:**")
+    decision_log_sections["Execution Feedback"].append(
+        "Failed to generate a valid SQL query after multiple attempts."
+    )
+
     return {
         "error": "Failed to generate a valid SQL query after multiple attempts.",
-        "decision_log": "\n".join(decision_log),
+        "decision_log": build_markdown_decision_log(decision_log_sections),
         "visualization_recommendation": None
     }
 
+
+def build_markdown_decision_log(sections: dict) -> str:
+    """
+    Constructs a markdown formatted decision log from the provided sections.
+    Hides sections with no content.
+    """
+    markdown_log = ""
+    for section, contents in sections.items():
+        if contents:
+            markdown_log += f"### {section}\n\n"
+            for content in contents:
+                markdown_log += f"{content}\n\n"
+    return markdown_log
 
 def get_natural_language_summary(query: str, paths_summary: list) -> str:
     """
@@ -255,7 +299,7 @@ def create_chart(df: pd.DataFrame, chart_type: str, x_col: str, y_col: str) -> O
             ).properties(
                 width='container',
                 height=400
-            )
+            ).interactive()
         else:
             encoding = {
                 "x": alt.X(x_col, title=x_col),
@@ -269,7 +313,7 @@ def create_chart(df: pd.DataFrame, chart_type: str, x_col: str, y_col: str) -> O
             chart = chart_props[chart_type].encode(**encoding).properties(
                 width='container',
                 height=400
-            )
+            ).interactive()
 
         return chart
 
@@ -306,16 +350,14 @@ def display_summary_statistics(df: pd.DataFrame) -> None:
 
             for col in numeric_cols:
                 st.markdown(f"#### {col}")
-                st.altair_chart(
-                    alt.Chart(df).mark_bar().encode(
-                        alt.X(col, bin=alt.Bin(maxbins=30), title=f"Distribution of {col}"),
-                        y='count()'
-                    ).properties(
-                        width='container',
-                        height=200
-                    ),
-                    use_container_width=True
-                )
+                chart = alt.Chart(df).mark_bar().encode(
+                    alt.X(col, bin=alt.Bin(maxbins=30), title=f"Distribution of {col}"),
+                    y='count()'
+                ).properties(
+                    width='container',
+                    height=200
+                ).interactive()
+                st.altair_chart(chart, use_container_width=True)
 
     if not non_numeric_cols.empty:
         with tab2:
@@ -559,7 +601,7 @@ if db_type == "SQLite":
                     with st.expander(f"View Schema: {table} 📖", expanded=False):
                         st.json(schemas[table])
 
-                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Your Query 💬")
+                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Your Query 💬", label_visibility="hidden")
                 if user_message:
                     with st.spinner('🧠 Generating SQL query...'):
                         response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
@@ -589,7 +631,7 @@ elif db_type == "PostgreSQL":
                     with st.expander(f"View Schema: {table} 📖", expanded=False):
                         st.json(schemas[table])
 
-                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message_pg", label="Your Query 💬")
+                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message_pg", label="Your Query 💬", label_visibility="hidden")
                 if user_message:
                     with st.spinner('🧠 Generating SQL query...'):
                         response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
