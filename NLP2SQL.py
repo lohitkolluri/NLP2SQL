@@ -399,7 +399,13 @@ def handle_query_response(response: dict, db_name: str, db_type: str, host: Opti
         sql_results = get_data(query, db_name, db_type, host, user, password)
 
         if sql_results.empty:
-            st.warning("The query returned no results.")
+            # Enhanced message explaining why no results were returned
+            no_result_reason = "The query executed successfully but did not match any records in the database."
+            if 'no valid SQL query generated' in decision_log:
+                no_result_reason = "The query was not generated due to insufficient or ambiguous input."
+            elif 'SQL query validation failed' in decision_log:
+                no_result_reason = "The query failed validation checks and was not executed."
+            st.warning(f"The query returned no results because: {no_result_reason}")
             return
 
         if sql_results.columns.duplicated().any():

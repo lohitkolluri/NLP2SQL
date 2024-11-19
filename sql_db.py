@@ -107,25 +107,22 @@ def get_all_schemas(db_name: str, db_type: str, host: Optional[str] = None, user
     try:
         if db_type.lower() == 'sqlite':
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+            for table in tables:
+                table_name = table[0]
+                cursor.execute(f"PRAGMA table_info(\"{table_name}\");")
+                columns = cursor.fetchall()
+                schema = {col[1]: col[2] for col in columns}
+                schemas[table_name] = schema
         elif db_type.lower() == 'postgresql':
             cursor.execute("""
                 SELECT table_name
                 FROM information_schema.tables
                 WHERE table_schema = 'public';
             """)
-        else:
-            logger.error(f"Unsupported database type: {db_type}")
-            return schemas
-
-        tables = cursor.fetchall()
-
-        for table in tables:
-            table_name = table[0]
-            if db_type.lower() == 'sqlite':
-                cursor.execute(f"PRAGMA table_info({sql.Identifier(table_name).string});")
-                columns = cursor.fetchall()
-                schema = {col[1]: col[2] for col in columns}
-            elif db_type.lower() == 'postgresql':
+            tables = cursor.fetchall()
+            for table in tables:
+                table_name = table[0]
                 cursor.execute(sql.SQL("""
                     SELECT column_name, data_type
                     FROM information_schema.columns
@@ -133,7 +130,10 @@ def get_all_schemas(db_name: str, db_type: str, host: Optional[str] = None, user
                 """), [table_name])
                 columns = cursor.fetchall()
                 schema = {col[0]: col[1] for col in columns}
-            schemas[table_name] = schema
+                schemas[table_name] = schema
+        else:
+            logger.error(f"Unsupported database type: {db_type}")
+            return schemas
 
         logger.info("Schemas retrieved successfully.")
     except Exception as e:
