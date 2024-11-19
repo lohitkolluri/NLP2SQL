@@ -39,8 +39,8 @@ def get_completion_from_messages(
     system_message: str,
     user_message: str,
     model: str = None,
-    temperature: float = 1.0,
-    top_p: float = 1.0,
+    temperature: float = 0.7,
+    top_p: float = 0.9,
     max_tokens: int = 1024
 ) -> str:
     """
