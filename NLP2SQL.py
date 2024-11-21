@@ -40,52 +40,6 @@ st.set_page_config(
 # Load environment variables once
 load_dotenv()
 
-# Custom CSS for styling
-def add_custom_css():
-    st.markdown(
-        """
-        <style>
-        /* Centered main header */
-        .main-header {
-            text-align: center;
-            color: #1E90FF;
-        }
-
-        /* Styled buttons */
-        .stButton>button {
-            background-color: #1E90FF;
-            color: white;
-            border-radius: 8px;
-            height: 3em;
-            width: 15em;
-            font-size:16px;
-            font-weight: bold;
-        }
-
-        /* Styled expander headers */
-        .st-expanderHeader {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1E90FF;
-        }
-
-        /* Sidebar headers */
-        .sidebar .sidebar-content {
-            background-color: #f0f2f6;
-        }
-
-        /* Improve slider appearance */
-        .st-slider > div > div > div > div > div {
-            background: #1E90FF;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-add_custom_css()
-
-
 @st.cache_resource
 def load_system_message(schemas: dict) -> str:
     return SYSTEM_MESSAGE.format(schemas=json.dumps(schemas, indent=2))
@@ -134,12 +88,12 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
 
     # Query Input Details
     decision_log_sections["Query Input Details"].append(
-        f"`{user_message}`"
+        f"User's input: `{user_message}`"
     )
 
     # Preprocessing Steps
     decision_log_sections["Preprocessing Steps"].append(
-        "- **Normalization:** Converted user input to lowercase and stripped unnecessary whitespace."
+        "Normalized the input to lowercase and removed unnecessary whitespace for clarity."
     )
 
     for attempt in range(max_attempts):
@@ -156,51 +110,51 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
 
             if error:
                 decision_log_sections["Execution Feedback"].append(
-                    f"**Attempt {attempt + 1}: Error encountered:** {error}. Retrying..."
+                    f"Attempt {attempt + 1}: We encountered an issue: {error}. We're trying again."
                 )
                 continue
 
             if not query:
                 decision_log_sections["Execution Feedback"].append(
-                    f"**Attempt {attempt + 1}: No valid SQL query generated.** Retrying..."
+                    f"Attempt {attempt + 1}: We couldn't generate a valid SQL query. Let's try that again."
                 )
                 continue
 
             if paths_considered:
                 decision_log_sections["Path Identification"].append(
-                    "- **Lists the multiple paths identified during query generation.**"
+                    "We identified multiple potential paths to generate the query:"
                 )
                 for idx, path in enumerate(paths_considered, start=1):
                     tables = path['tables']
                     columns = [col for sublist in path['columns'] for col in sublist]
                     score = len(tables) + len(columns)
                     decision_log_sections["Path Identification"].append(
-                        f"- **Path {idx}:** {path['description']} | Tables: `{', '.join(tables)}` | Columns: `{', '.join(columns)}` | Score: {score}"
+                        f"Path {idx}: Description: {path['description']}, Tables: {', '.join(tables)}, Columns: {', '.join(columns)}, Score: {score}"
                     )
 
             if tables_and_columns:
                 decision_log_sections["Chosen Path Explanation"].append(
-                    "- **Table Usage:** Justifies why the selected path was chosen over alternatives."
+                    "Explanation for the chosen path based on table usage and column relevance:"
                 )
                 for entry in tables_and_columns:
                     table = entry['table']
                     columns = ', '.join(entry['columns'])
                     decision_log_sections["Chosen Path Explanation"].append(
-                        f"- **Table `{table}`:** Columns `{columns}` were utilized based on their relevance and data type compatibility."
+                        f"Table `{table}` used columns `{columns}` due to their relevance and compatibility with data types."
                     )
 
             if validate_sql_query(query):
                 decision_log_sections["Generated SQL Query"].append(
-                    f"```sql\n{query}\n```"
+                    f"Here is the SQL query we generated:\n```sql\n{query}\n```"
                 )
 
                 natural_language_summary = get_natural_language_summary(query, decision_log_sections["Path Identification"])
                 decision_log_sections["Resolution Criteria"].append(
-                    f"- **Summary:** {natural_language_summary}"
+                    f"Summary of the decision-making process: {natural_language_summary}"
                 )
 
                 decision_log_sections["Execution Feedback"].append(
-                    "**SQL query validation passed.** Executing the query on the database."
+                    "SQL query validation was successful. We are now executing the query."
                 )
 
                 return {
@@ -210,30 +164,30 @@ def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) 
                 }
             else:
                 decision_log_sections["Execution Feedback"].append(
-                    f"**Attempt {attempt + 1}: SQL query validation failed.** Requesting revision."
+                    f"Attempt {attempt + 1}: The SQL query did not pass validation. We're requesting a revision."
                 )
                 user_message += " Please ensure the query adheres to valid SQL syntax."
 
         except json.JSONDecodeError:
             decision_log_sections["Execution Feedback"].append(
-                f"**Attempt {attempt + 1}: Failed to decode JSON response.** Retrying..."
+                f"Attempt {attempt + 1}: We had trouble understanding the server's response. Let's try again."
             )
             decision_log_sections["Execution Feedback"].append(
-                f"**Raw Response:** `{response}`"
+                "Here's what we received: " + response
             )
-            user_message += " The response was not valid JSON. Provide additional clarity."
+            user_message += " The response was not valid JSON. Please provide additional clarity."
             continue
 
         except Exception as e:
             decision_log_sections["Execution Feedback"].append(
-                f"**Attempt {attempt + 1}: Unexpected error:** `{e}`. Retrying..."
+                f"Attempt {attempt + 1}: We ran into an unexpected issue: {e}. Let's try again."
             )
             continue
 
     # After all attempts failed
-    decision_log_sections["Execution Feedback"].append("**Final Outcome:**")
+    decision_log_sections["Execution Feedback"].append("Final Outcome:")
     decision_log_sections["Execution Feedback"].append(
-        "Failed to generate a valid SQL query after multiple attempts."
+        "Unfortunately, we couldn't generate a valid SQL query after several attempts."
     )
 
     return {
@@ -600,18 +554,24 @@ if db_type == "SQLite":
         table_names = list(schemas.keys())
 
         if table_names:
-            selected_tables = st.sidebar.multiselect("Select Tables 📋", options=table_names)
-            if selected_tables:
-                colored_header(f"🔍 Selected Tables: {', '.join(selected_tables)}", color_name="blue-70", description="")
-                for table in selected_tables:
-                    with st.expander(f"View Schema: {table} 📖", expanded=False):
-                        st.json(schemas[table])
+            options = ["Select All"] + table_names
+            selected_tables = st.sidebar.multiselect("Select Tables 📋", options=options, key="sqlite_tables")
+            if "Select All" in selected_tables:
+                if len(selected_tables) < len(options):
+                    selected_tables = table_names
+                else:
+                    selected_tables = options
+            selected_tables = [table for table in selected_tables if table != "Select All"]
+            colored_header(f"🔍 Selected Tables: {', '.join(selected_tables)}", color_name="blue-70", description="")
+            for table in selected_tables:
+                with st.expander(f"View Schema: {table} 📖", expanded=False):
+                    st.json(schemas[table])
 
-                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Your Query 💬", label_visibility="hidden")
-                if user_message:
-                    with st.spinner('🧠 Generating SQL query...'):
-                        response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
-                    handle_query_response(response, db_file, db_type='sqlite')
+            user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message", label="Your Query 💬", label_visibility="hidden")
+            if user_message:
+                with st.spinner('🧠 Generating SQL query...'):
+                    response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
+                handle_query_response(response, db_file, db_type='sqlite')
 
         else:
             st.info("📭 No tables found in the database.")
@@ -630,18 +590,24 @@ elif db_type == "PostgreSQL":
         table_names = list(schemas.keys())
 
         if table_names:
-            selected_tables = st.sidebar.multiselect("Select Tables 📋", options=table_names)
-            if selected_tables:
-                colored_header("🔍 Selected Tables:", color_name="blue-70", description="")
-                for table in selected_tables:
-                    with st.expander(f"View Schema: {table} 📖", expanded=False):
-                        st.json(schemas[table])
+            options = ["Select All"] + table_names
+            selected_tables = st.sidebar.multiselect("Select Tables 📋", options=options, key="postgresql_tables")
+            if "Select All" in selected_tables:
+                if len(selected_tables) < len(options):
+                    selected_tables = table_names
+                else:
+                    selected_tables = options
+            selected_tables = [table for table in selected_tables if table != "Select All"]
+            colored_header("🔍 Selected Tables:", color_name="blue-70", description="")
+            for table in selected_tables:
+                with st.expander(f"View Schema: {table} 📖", expanded=False):
+                    st.json(schemas[table])
 
-                user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message_pg", label="Your Query 💬", label_visibility="hidden")
-                if user_message:
-                    with st.spinner('🧠 Generating SQL query...'):
-                        response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
-                    handle_query_response(response, postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
+            user_message = st.text_input(placeholder="Type your SQL query here...", key="user_message_pg", label="Your Query 💬", label_visibility="hidden")
+            if user_message:
+                with st.spinner('🧠 Generating SQL query...'):
+                    response = cached_generate_sql_query(user_message, {table: schemas[table] for table in selected_tables})
+                handle_query_response(response, postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
 
         else:
             st.info("📭 No tables found in the database.")
