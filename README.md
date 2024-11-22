@@ -9,6 +9,7 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
 - **Interactive Data Explorer**: Allows filtering and analysis of query results within an interactive data table.
 - **Dynamic Schema Representation**: Retrieves and displays database schemas, with options to select tables for queries.
 - **Custom Visualizations**: Offers a variety of chart types for visualizing query results.
+- **Visualization Suggestion:** Recommend the most suitable visualization type based on the query output, and include a ⭐️ icon beside the suggestion for better emphasis.
 - **Summary Statistics**: Displays numeric and categorical data insights for query results.
 - **Decision Log and Query Path Summary**: Provides a detailed log of the query generation process, including error handling and decision-making insights.
 - **Export Options**: Supports exporting query results in multiple formats.
@@ -19,6 +20,7 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
 ## 🛠️ Installation Steps
 
 1. **Clone the Repository:**
+
    ```bash
    git clone https://github.com/lohitkolluri/NLP2SQL.git
    cd NLP2SQL
@@ -26,6 +28,7 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
 
 2. **Set Up Environment Variables:**
    Create a `.env` file in the root directory with the following variables:
+
    ```env
    OPENAI_API_KEY="Your Azure OpenAI API Key"
    OPENAI_ENDPOINT="https://name_of_openai_resource.openai.azure.com/"
@@ -34,15 +37,18 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
    ```
 
 3. **Install Dependencies:**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Database Setup:**
+
    - **SQLite**: Ensure you have SQLite installed and accessible.
    - **PostgreSQL**: Install PostgreSQL and configure your database settings in the `.env` file.
 
 5. **Running the App:**
+
    ```bash
    streamlit run NLP2SQL.py
    ```
