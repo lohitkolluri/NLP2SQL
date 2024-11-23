@@ -30,14 +30,13 @@ SUPPORTED_CHART_TYPES = {
     "Histogram": "A graphical representation of the distribution of numerical data."
 }
 
-# Set page configuration with a custom layout
+# Page Configuration
 st.set_page_config(
     page_icon="🗃️",
     page_title="Chat with Your DB",
     layout="wide"
 )
 
-# Load environment variables once
 load_dotenv()
 
 @st.cache_resource
@@ -439,7 +438,7 @@ def handle_query_response(response: dict, db_name: str, db_type: str, host: Opti
         export_format = st.selectbox("Select Export Format", options=["CSV", "Excel", "JSON"], key="export_format")
         export_results(filtered_results, export_format)
 
-        # Initialize query history if not present
+        # Initialize Query History
         if "query_history" not in st.session_state:
             st.session_state.query_history = []
             st.session_state.query_timestamps = []
@@ -542,7 +541,7 @@ def analyze_dataframe_for_visualization(df: pd.DataFrame) -> list:
     logger.debug(f"Ordered Suggestions: {ordered_suggestions}")
     return ordered_suggestions
 
-# Database selection and connection settings
+# Database Setup
 db_type = st.sidebar.selectbox("Select Database Type 🗄️", options=["SQLite", "PostgreSQL"])
 
 if db_type == "SQLite":
@@ -614,7 +613,7 @@ elif db_type == "PostgreSQL":
     else:
         st.info("🔒 Please fill in all PostgreSQL connection details to start.")
 
-# Query history with re-run and delete options
+# Query history 
 with st.sidebar.expander(" Query History", expanded=False):
     if st.session_state.get("query_history"):
         st.write("### 📝 Saved Queries")
