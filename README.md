@@ -45,7 +45,7 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
 4. **Database Setup:**
 
    - **SQLite**: Ensure you have SQLite installed and accessible.
-   - **PostgreSQL**: Install PostgreSQL and configure your database settings in the `.env` file.
+   - **PostgreSQL**: Install PostgreSQL and configure your database settings in the db selector dropdown.
 
 5. **Running the App:**
 
