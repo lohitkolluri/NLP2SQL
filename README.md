@@ -16,6 +16,10 @@ NLP2SQL is a project that aims to generate SQL queries from natural language tex
 - **Query History**: Saves and revisits past queries for easy future access.
 - **Safe SQL Execution**: Validates SQL queries to prevent harmful commands and SQL injection.
 - **PostgreSQL Connection Configuration**: Allows configuration of connection details for PostgreSQL databases.
+- **Error Handling and Retry Mechanism**: Implements robust error handling and retries for generating SQL queries, ensuring reliability even with complex inputs.
+- **Enhanced Visualization Options**: Includes dynamic suggestions for visualization types and interactive chart configuration in the sidebar.
+- **Advanced Data Handling**: Features like data type conversion for date columns and handling of duplicate column names in query results.
+- **Interactive Query History**: Provides a searchable and paginated query history with options to re-run past queries.
 
 ## 🛠️ Installation Steps
 
