@@ -33,7 +33,7 @@ SUPPORTED_CHART_TYPES = {
 # Page Configuration
 st.set_page_config(
     page_icon="🗃️",
-    page_title="Chat with Your DB",
+    page_title="Transforming Questions into Queries",
     layout="wide"
 )
 
@@ -325,7 +325,7 @@ def display_summary_statistics(df: pd.DataFrame) -> None:
 
 def handle_query_response(response: dict, db_name: str, db_type: str, host: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None) -> None:
     """
-    Process the API response and display query results, charts, and decision log.
+    Process the API response and display query results, charts, and decision log with enhanced error handling.
     """
     try:
         query = response.get('query', '')
@@ -334,7 +334,8 @@ def handle_query_response(response: dict, db_name: str, db_type: str, host: Opti
         visualization_recommendation = response.get('visualization_recommendation', None)
 
         if error:
-            st.error(f"Error generating SQL query: {error}")
+            detailed_error = generate_detailed_error_message(error)
+            st.error(f"Error generating SQL query: {detailed_error}")
             return
 
         if not query:
@@ -447,7 +448,8 @@ def handle_query_response(response: dict, db_name: str, db_type: str, host: Opti
         st.session_state.query_timestamps.append(pd.Timestamp.now())
 
     except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
+        detailed_error = generate_detailed_error_message(str(e))
+        st.error(f"An unexpected error occurred: {detailed_error}")
         logger.exception(f"Unexpected error: {e}")
 
 
@@ -540,6 +542,14 @@ def analyze_dataframe_for_visualization(df: pd.DataFrame) -> list:
     ordered_suggestions = [chart for chart in SUPPORTED_CHART_TYPES.keys() if chart in suggestions]
     logger.debug(f"Ordered Suggestions: {ordered_suggestions}")
     return ordered_suggestions
+
+def generate_detailed_error_message(error_message: str) -> str:
+    """
+    Use OpenAI to generate a detailed explanation of the error message.
+    """
+    prompt = f"Provide a detailed and user-friendly explanation for the following error message:\n\n{error_message}"
+    detailed_error = get_completion_from_messages(SYSTEM_MESSAGE, prompt)
+    return detailed_error.strip() if detailed_error else error_message
 
 # Database Setup
 db_type = st.sidebar.selectbox("Select Database Type 🗄️", options=["SQLite", "PostgreSQL"])
