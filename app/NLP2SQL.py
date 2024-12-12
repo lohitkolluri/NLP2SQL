@@ -1,9 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 import io
 import json
 import re
 import logging
 from typing import Optional
-
 import pandas as pd
 import altair as alt
 import streamlit as st
@@ -11,12 +13,11 @@ import streamlit_nested_layout
 from dotenv import load_dotenv
 from streamlit_extras.colored_header import colored_header
 import numpy as np
-
-import sql_db
-from prompts.prompts import SYSTEM_MESSAGE
 from streamlit_extras.chart_container import chart_container
 from streamlit_extras.dataframe_explorer import dataframe_explorer
-from azure_openai import get_completion_from_messages
+import src.database.DB_Config as DB_Config
+from src.prompts.Base_Prompt import SYSTEM_MESSAGE
+from src.api.OpenAI_Config import get_completion_from_messages
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +50,7 @@ def get_data(query: str, db_name: str, db_type: str, host: Optional[str] = None,
     """
     Fetch results from the database based on the provided SQL query.
     """
-    return sql_db.query_database(query, db_name, db_type, host, user, password)
+    return DB_Config.query_database(query, db_name, db_type, host, user, password)
 
 
 def save_temp_file(uploaded_file) -> str:
@@ -67,7 +68,7 @@ def cached_generate_sql_query(user_message: str, schemas: dict, max_attempts: in
     return generate_sql_query(user_message, schemas, max_attempts)
 
 
-def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 3) -> dict:
+def generate_sql_query(user_message: str, schemas: dict, max_attempts: int = 1) -> dict:
     """
     Generate SQL query from user input with retry mechanism.
     """
@@ -559,7 +560,7 @@ if db_type == "SQLite":
 
     if uploaded_file:
         db_file = save_temp_file(uploaded_file)
-        schemas = sql_db.get_all_schemas(db_file, db_type='sqlite')
+        schemas = DB_Config.get_all_schemas(db_file, db_type='sqlite')
         table_names = list(schemas.keys())
 
         if table_names:
@@ -595,7 +596,7 @@ elif db_type == "PostgreSQL":
         postgres_password = st.text_input("Password 🔑", type="password", placeholder="Password")
 
     if all([postgres_host, postgres_db, postgres_user, postgres_password]):
-        schemas = sql_db.get_all_schemas(postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
+        schemas = DB_Config.get_all_schemas(postgres_db, db_type='postgresql', host=postgres_host, user=postgres_user, password=postgres_password)
         table_names = list(schemas.keys())
 
         if table_names:

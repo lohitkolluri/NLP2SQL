@@ -24,12 +24,10 @@
 - **Natural Language to SQL** 🗣️ → 📝
   - Convert text queries into SQL commands using Azure OpenAI
   - Intelligent query interpretation and generation
-  
 - **Multi-Database Support** 🗄️
   - SQLite compatibility
   - PostgreSQL integration
   - Dynamic database switching
-  
 - **Interactive Data Explorer** 🔍
   - Real-time data filtering
   - Interactive query results
@@ -44,7 +42,6 @@
   - Multiple chart types
   - Interactive configurations
   - Smart visualization suggestions ⭐️
-  
 - **Summary Statistics** 📋
   - Numeric data insights
   - Categorical analysis
@@ -59,7 +56,6 @@
   - Query validation
   - SQL injection prevention
   - Error handling
-  
 - **Query History** 📚
   - Searchable log
   - Re-runnable queries
@@ -78,16 +74,17 @@ graph LR
     E --> F[Visualization]
 ```
 
-
 ### Installation
 
 1️⃣ **Clone the Repository**
+
 ```bash
 git clone https://github.com/lohitkolluri/NLP2SQL.git
 cd NLP2SQL
 ```
 
 2️⃣ **Set Up Environment**
+
 ```bash
 # Create .env file
 cat << EOF > .env
@@ -99,25 +96,27 @@ EOF
 ```
 
 3️⃣ **Install Dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4️⃣ **Launch the App**
+
 ```bash
-streamlit run NLP2SQL.py
+streamlit run app/NLP2SQL.py
 ```
 
 ## 🎨 Built With
 
 <div align="center">
 
-| Technology | Purpose |
-|:-----------:|:--------:|
-| ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit) | Web Interface |
+|                                                Technology                                                 |    Purpose     |
+| :-------------------------------------------------------------------------------------------------------: | :------------: |
+|       ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit)        | Web Interface  |
 | ![Azure OpenAI](https://img.shields.io/badge/Azure%20OpenAI-0078D4?style=flat-square&logo=microsoftazure) | NLP Processing |
-| ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql) | Database |
-| ![Altair](https://img.shields.io/badge/Altair-005571?style=flat-square) | Visualizations |
+|      ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql)      |    Database    |
+|                  ![Altair](https://img.shields.io/badge/Altair-005571?style=flat-square)                  | Visualizations |
 
 </div>
 
@@ -154,6 +153,8 @@ mindmap
 
 <div align="center">
 
-### 🌟 Start Exploring Your Data Today! 
+### 🌟 Start Exploring Your Data Today!
+
 ---
+
 </div>

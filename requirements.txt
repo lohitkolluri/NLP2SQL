@@ -1,10 +1,14 @@
+# Core dependencies
 streamlit
+streamlit-nested-layout
+streamlit-extras
+# Data processing and visualization
 pandas
 altair
+openpyxl
+# Database
+psycopg2-binary
+sqlalchemy
+# API and configuration
 python-dotenv
 openai
-streamlit-extras
-sqlalchemy
-psycopg2-binary
-streamlit-nested-layout
-openpyxl 
