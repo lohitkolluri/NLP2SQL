@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Made with Azure OpenAI](https://img.shields.io/badge/Made%20with-Azure%20OpenAI-0078D4?style=for-the-badge&logo=microsoftazure)](https://azure.microsoft.com/products/cognitive-services/openai-service/)
+[![Made with Google Gemini](https://img.shields.io/badge/Made%20with-Google%20Gemini-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/technologies/gemini/)
 [![Built with Streamlit](https://img.shields.io/badge/Built%20with-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://streamlit.io)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%7C%20SQLite-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
 
@@ -22,16 +22,17 @@
 <summary>🎯 Core Features</summary>
 
 - **Natural Language to SQL** 🗣️ → 📝
-  - Convert text queries into SQL commands using Azure OpenAI
-  - Intelligent query interpretation and generation
+  - Convert text queries into SQL commands using Google's Gemini Pro model
+  - Intelligent query interpretation with detailed decision logs
+  - Step-by-step reasoning for query generation
 - **Multi-Database Support** 🗄️
-  - SQLite compatibility
-  - PostgreSQL integration
-  - Dynamic database switching
+  - SQLite compatibility with file upload
+  - PostgreSQL integration with secure connection
+  - Dynamic schema exploration
 - **Interactive Data Explorer** 🔍
-  - Real-time data filtering
-  - Interactive query results
-  - Dynamic table views
+  - Real-time data filtering and exploration
+  - Comprehensive query results with summary statistics
+  - Advanced table views with sorting and filtering
 
 </details>
 
@@ -39,13 +40,14 @@
 <summary>📊 Visualization & Analytics</summary>
 
 - **Dynamic Visualizations** 📈
-  - Multiple chart types
-  - Interactive configurations
-  - Smart visualization suggestions ⭐️
+  - Multiple chart types (Bar, Line, Scatter, Area, Histogram)
+  - Interactive chart configuration
+  - AI-powered visualization recommendations
 - **Summary Statistics** 📋
-  - Numeric data insights
-  - Categorical analysis
-  - Trend identification
+  - Detailed numeric analysis
+  - Categorical data insights
+  - Distribution analysis
+  - Statistical measures (mean, median, mode, skewness, kurtosis)
 
 </details>
 
@@ -53,13 +55,13 @@
 <summary>🛡️ Security & Management</summary>
 
 - **Safe SQL Execution** 🔒
-  - Query validation
+  - Strict query validation
   - SQL injection prevention
-  - Error handling
+  - Comprehensive error handling and feedback
 - **Query History** 📚
-  - Searchable log
-  - Re-runnable queries
-  - Export capabilities
+  - Searchable query log
+  - Query reusability
+  - Multiple export formats (CSV, Excel, JSON)
 
 </details>
 
@@ -67,7 +69,7 @@
 
 ```mermaid
 graph LR
-    A[User Input] --> B[NLP Engine]
+    A[User Input] --> B[Gemini Pro]
     B --> C[SQL Generator]
     C --> D[Database]
     D --> E[Results]
@@ -79,7 +81,7 @@ graph LR
 1️⃣ **Clone the Repository**
 
 ```bash
-git clone https://github.com/lohitkolluri/NLP2SQL.git
+git clone https://github.com/yourusername/NLP2SQL.git
 cd NLP2SQL
 ```
 
@@ -88,10 +90,7 @@ cd NLP2SQL
 ```bash
 # Create .env file
 cat << EOF > .env
-OPENAI_API_KEY="Your Azure OpenAI API Key"
-OPENAI_ENDPOINT="https://name_of_openai_resource.openai.azure.com/"
-OPENAI_API_VERSION="API Version"
-MODEL_NAME="Name of Your Model from Azure OpenAI"
+GOOGLE_API_KEY="Your Google Gemini API Key"
 EOF
 ```
 
@@ -111,12 +110,12 @@ streamlit run app/NLP2SQL.py
 
 <div align="center">
 
-|                                                Technology                                                 |    Purpose     |
-| :-------------------------------------------------------------------------------------------------------: | :------------: |
-|       ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit)        | Web Interface  |
-| ![Azure OpenAI](https://img.shields.io/badge/Azure%20OpenAI-0078D4?style=flat-square&logo=microsoftazure) | NLP Processing |
-|      ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql)      |    Database    |
-|                  ![Altair](https://img.shields.io/badge/Altair-005571?style=flat-square)                  | Visualizations |
+|                                             Technology                                              |    Purpose     |
+| :-------------------------------------------------------------------------------------------------: | :------------: |
+|    ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit)     | Web Interface  |
+| ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-4285F4?style=flat-square&logo=google) | NLP Processing |
+|   ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql)   |    Database    |
+|               ![Altair](https://img.shields.io/badge/Altair-005571?style=flat-square)               | Visualizations |
 
 </div>
 
@@ -127,16 +126,16 @@ mindmap
   root((NLP2SQL))
     Query Processing
       Natural Language Input
-      SQL Generation
-      Validation
+      Decision Logging
+      Detailed Reasoning
     Visualization
-      Charts
-      Tables
-      Statistics
+      Interactive Charts
+      Summary Statistics
+      Data Distribution
     Database
       PostgreSQL
       SQLite
-      Schema Explorer
+      Schema Analysis
     Security
       Query Validation
       Error Handling
@@ -146,15 +145,37 @@ mindmap
 ## 💡 How It Works
 
 1. **Query Input** ➡️ User enters natural language query
-2. **Processing** ➡️ Azure OpenAI translates to SQL
-3. **Execution** ➡️ Query runs against selected database
-4. **Visualization** ➡️ Results displayed with appropriate charts
-5. **Export** ➡️ Download results in preferred format
+2. **Processing** ➡️ Gemini Pro analyzes and generates SQL with reasoning
+3. **Validation** ➡️ Query is validated for safety and correctness
+4. **Execution** ➡️ Query runs against selected database
+5. **Analysis** ➡️ Results are processed with summary statistics
+6. **Visualization** ➡️ Data is presented with AI-recommended charts
+7. **Export** ➡️ Results can be downloaded in multiple formats
+
+## 📊 Supported Visualizations
+
+- **Bar Chart**: Comparing categorical data
+- **Line Chart**: Time-series and trend analysis
+- **Scatter Plot**: Relationship between variables
+- **Area Chart**: Cumulative totals and trends
+- **Histogram**: Distribution analysis
+
+## 🔒 Security Features
+
+- Strict SQL query validation
+- Prevention of harmful SQL operations
+- Secure database connections
+- Protected sensitive information
+- Input sanitization
+
+## 📈 Data Analysis
+
+- Comprehensive summary statistics
+- Distribution analysis
+- Correlation detection
+- Trend identification
+- Outlier detection
 
 <div align="center">
-
-### 🌟 Start Exploring Your Data Today!
-
----
 
 </div>
