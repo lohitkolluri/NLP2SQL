@@ -1,8 +1,17 @@
+import os
+from dotenv import load_dotenv
 import google.generativeai as genai
 import re
 
-# Configure the Generative AI API
-genai.configure(api_key="AIzaSyDCoRQd6i4yiK0q2Ec2oTeIZ5KmPheDjn8")
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-pro')
+
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable is not set")
+
+genai.configure(api_key=GEMINI_API_KEY)
 
 def get_completion_from_messages(
     system_message: str,
@@ -16,8 +25,7 @@ def get_completion_from_messages(
         print(f"Combined Message:\n{combined_message}")
         print(f"Temperature: {temperature}")
         
-        # Generate model
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        model = genai.GenerativeModel(GEMINI_MODEL)
         response = model.generate_content(
             contents=combined_message,
             generation_config={"temperature": temperature}

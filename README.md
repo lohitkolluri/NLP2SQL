@@ -90,7 +90,8 @@ cd NLP2SQL
 ```bash
 # Create .env file
 cat << EOF > .env
-GOOGLE_API_KEY="Your Google Gemini API Key"
+GEMINI_API_KEY = "Your Google Gemini API Key"
+GEMINI_MODEL = "Name of Gemini Model You Will be usin"
 EOF
 ```
 
