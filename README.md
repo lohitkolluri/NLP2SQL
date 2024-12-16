@@ -1,4 +1,7 @@
-# NLP2SQL 🤖
+<div align="center">
+
+![Banner](https://capsule-render.vercel.app/api?type=waving&color=gradient&height=200&section=header&text=NLP2SQL&fontSize=80&animation=fadeIn&fontAlignY=35)
+</div>
 
 <div align="center">
 
@@ -178,5 +181,12 @@ mindmap
 - Outlier detection
 
 <div align="center">
+
+</div>
+<div align="center">
+
+MIT License © [Lohit Kolluri](LICENSE) - feel free to use this project as you wish!
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=100&section=footer" width="100%"/>
 
 </div>
