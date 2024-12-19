@@ -11,4 +11,4 @@ psycopg2-binary
 sqlalchemy
 # API and configuration
 python-dotenv
-openai
+google-generativeai
