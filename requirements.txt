@@ -15,3 +15,4 @@ python-dotenv
 openai
 # Add statsmodels for statistical models
 statsmodels
+numpy>=1.22.2 # not directly required, pinned by Snyk to avoid a vulnerability
