@@ -1,5 +1,5 @@
 # Core dependencies
-streamlit>=1.28.0
+streamlit>=1.43.2
 streamlit-nested-layout>=0.1.1
 streamlit-extras>=0.3.0
 # Data processing and visualization
