@@ -20,3 +20,4 @@ jsonschema>=4.20.0
 # Statistical models and analysis
 scikit-learn>=1.3.0
 statsmodels>=0.14.0
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
